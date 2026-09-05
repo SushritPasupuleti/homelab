@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plex
+  namespace: homelab
+  labels:
+    app: plex
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: plex
+  template:
+    metadata:
+      labels:
+        app: plex
+    spec:
+      containers:
+        - name: plex
+          image: linuxserver/plex:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 32400
+              name: http
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "UTC"
+            - name: VERSION
+              value: "docker"
+          volumeMounts:
+            - name: media
+              mountPath: /data
+            - name: config
+              mountPath: /config
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 2
+              memory: 2Gi
+      volumes:
+        - name: media
+          hostPath:
+            path: /mnt/wdex4100/media
+            type: DirectoryOrCreate
+        - name: config
+          persistentVolumeClaim:
+            claimName: plex-config
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: plex-config
+  namespace: homelab
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: plex
+  namespace: homelab
+  labels:
+    app: plex
+spec:
+  type: LoadBalancer
+  selector:
+    app: plex
+  ports:
+    - name: http
+      port: 32400
+      targetPort: 32400
+      protocol: TCP

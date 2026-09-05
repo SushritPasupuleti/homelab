@@ -9,12 +9,16 @@ STOCK_EZ_IMAGE="${STOCK_EZ_IMAGE:-ghcr.io/sushritpasupuleti/stock-ez:latest}"
 OLLAMA_IMAGE="${OLLAMA_IMAGE:-ollama/ollama:latest}"
 DASHBOARD_IMAGE="${DASHBOARD_IMAGE:-nginx:alpine}"
 PORTAINER_IMAGE="${PORTAINER_IMAGE:-portainer/portainer-ce:latest}"
+HOME_ASSISTANT_IMAGE="${HOME_ASSISTANT_IMAGE:-ghcr.io/home-assistant/home-assistant:stable}"
 STOCK_EZ_HOST="${STOCK_EZ_HOST:-stock-ez.homelab.local}"
 DASHBOARD_HOST="${DASHBOARD_HOST:-dashboard.homelab.local}"
 PORTAINER_HOST="${PORTAINER_HOST:-portainer.homelab.local}"
+HOMEASSISTANT_HOST="${HOMEASSISTANT_HOST:-homeassistant.homelab.local}"
+JELLYFIN_HOST="${JELLYFIN_HOST:-media.homelab.local}"
+PLEX_HOST="${PLEX_HOST:-plex.homelab.local}"
 DOMAIN="${DOMAIN:-homelab.local}"
 
-export NAMESPACE STOCK_EZ_IMAGE OLLAMA_IMAGE DASHBOARD_IMAGE PORTAINER_IMAGE STOCK_EZ_HOST DASHBOARD_HOST PORTAINER_HOST DOMAIN
+export NAMESPACE STOCK_EZ_IMAGE OLLAMA_IMAGE DASHBOARD_IMAGE PORTAINER_IMAGE HOME_ASSISTANT_IMAGE STOCK_EZ_HOST DASHBOARD_HOST PORTAINER_HOST HOMEASSISTANT_HOST JELLYFIN_HOST PLEX_HOST DOMAIN
 
 render_and_apply() {
   local file="$1"
@@ -34,13 +38,21 @@ kubectl apply -f "$ROOT_DIR/k8s/namespace.yaml"
 render_and_apply "$ROOT_DIR/k8s/stock-ez/configmap.yaml"
 render_and_apply "$ROOT_DIR/k8s/stock-ez/deployment.yaml"
 render_and_apply "$ROOT_DIR/k8s/ollama/ollama.yaml"
+render_and_apply "$ROOT_DIR/k8s/home-assistant/home-assistant.yaml"
 render_and_apply "$ROOT_DIR/k8s/dashboard/dashboard.yaml"
+render_and_apply "$ROOT_DIR/k8s/media/jellyfin.yaml"
+render_and_apply "$ROOT_DIR/k8s/media/minidlna.yaml"
+render_and_apply "$ROOT_DIR/k8s/media/plex.yaml"
 render_and_apply "$ROOT_DIR/k8s/ingress/ingress.yaml"
 render_and_apply "$ROOT_DIR/k8s/portainer/portainer.yaml"
 
 kubectl rollout status -n "$NAMESPACE" deployment/stock-ez --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/ollama --timeout=180s || true
+kubectl rollout status -n "$NAMESPACE" deployment/home-assistant --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/homelab-dashboard --timeout=180s || true
+kubectl rollout status -n "$NAMESPACE" deployment/jellyfin --timeout=180s || true
+kubectl rollout status -n "$NAMESPACE" deployment/minidlna --timeout=180s || true
+kubectl rollout status -n "$NAMESPACE" deployment/plex --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/portainer --timeout=180s || true
 
 kubectl get svc,ingress,pvc -n "$NAMESPACE"
@@ -49,3 +61,6 @@ echo "Deployment complete. Accessible URLs will be similar to:"
 echo "  http://$STOCK_EZ_HOST"
 echo "  http://$DASHBOARD_HOST"
 echo "  http://$PORTAINER_HOST"
+echo "  http://$HOMEASSISTANT_HOST"
+echo "  http://$JELLYFIN_HOST"
+echo "  http://$PLEX_HOST"

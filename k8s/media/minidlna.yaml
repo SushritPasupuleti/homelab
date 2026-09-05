@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minidlna
+  namespace: homelab
+  labels:
+    app: minidlna
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minidlna
+  template:
+    metadata:
+      labels:
+        app: minidlna
+    spec:
+      containers:
+        - name: minidlna
+          image: vladgh/minidlna:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8200
+              name: dlna
+          env:
+            - name: MINIDLNA_MEDIA_DIR
+              value: "/media"
+            - name: MINIDLNA_FRIENDLY_NAME
+              value: "Homelab DLNA"
+            - name: MINIDLNA_PORT
+              value: "8200"
+            - name: MINIDLNA_INOTIFY
+              value: "yes"
+            - name: MINIDLNA_ROOT_CONTAINER
+              value: "."
+          volumeMounts:
+            - name: media
+              mountPath: /media
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: media
+          hostPath:
+            path: /mnt/wdex4100/media
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minidlna
+  namespace: homelab
+  labels:
+    app: minidlna
+spec:
+  type: LoadBalancer
+  selector:
+    app: minidlna
+  ports:
+    - name: dlna
+      port: 8200
+      targetPort: 8200
+      protocol: TCP

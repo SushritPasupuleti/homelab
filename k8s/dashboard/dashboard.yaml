@@ -188,6 +188,15 @@ data:
               </ul>
             </article>
             <article class="card">
+              <span class="status up">Bambu A1</span>
+              <h3>Home Assistant</h3>
+              <p>Central, mobile-friendly endpoint for printer and device management.</p>
+              <ul>
+                <li>URL: http://homeassistant.homelab.local</li>
+                <li>Add your Bambu printer via Home Assistant integrations</li>
+              </ul>
+            </article>
+            <article class="card">
               <span class="status up">Reachable</span>
               <h3>LAN Access</h3>
               <p>Services are exposed through ingress, node ports, or a load balancer.</p>
@@ -232,6 +241,12 @@ data:
                   <td>http://portainer:9000</td>
                   <td>http://portainer.homelab.local</td>
                   <td>Container dashboard and management</td>
+                </tr>
+                <tr>
+                  <td>Home Assistant</td>
+                  <td>http://home-assistant:8123</td>
+                  <td>http://homeassistant.homelab.local</td>
+                  <td>Mobile-friendly central automation and Bambu A1 integration</td>
                 </tr>
               </tbody>
             </table>
