@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stock-ez-config
+  namespace: homelab
+data:
+  config.yaml: |
+    llm:
+      model: "qwen3:14b"
+      base_url: "http://ollama.homelab.svc.cluster.local:11434"
+      temperature: 0.3
+      num_ctx: 8192
+
+    region:
+      country: "IN"
+      market: "NSE"
+      currency: "INR"
+      timezone: "Asia/Kolkata"
+      name: "Hyderabad, India"
+
+    watchlist:
+      stocks:
+        - symbol: "RELIANCE.NS"
+          name: "Reliance Industries"
+        - symbol: "TCS.NS"
+          name: "Tata Consultancy Services"
+        - symbol: "HDFCBANK.NS"
+          name: "HDFC Bank"
+      etfs:
+        - symbol: "NIFTYBEES.NS"
+          name: "Nippon Nifty 50 ETF"
+      funds:
+        - scheme_code: "119551"
+          name: "HDFC Top 100 Fund - Direct Growth"
+
+    market_indices:
+      - symbol: "^NSEI"
+        name: "NIFTY 50"
+      - symbol: "^BSESN"
+        name: "SENSEX"
+
+    news:
+      max_articles: 20
+      lookback_hours: 24
+      sources:
+        - name: "Economic Times Markets"
+          url: "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"
+          type: "rss"
+        - name: "Moneycontrol Market Reports"
+          url: "https://www.moneycontrol.com/rss/marketreports.xml"
+          type: "rss"
+
+    output:
+      format: "rich"
+      save_report: true
+      report_dir: "reports"

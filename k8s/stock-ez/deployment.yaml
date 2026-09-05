@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stock-ez
+  namespace: homelab
+  labels:
+    app: stock-ez
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stock-ez
+  template:
+    metadata:
+      labels:
+        app: stock-ez
+    spec:
+      containers:
+        - name: stock-ez
+          image: ${STOCK_EZ_IMAGE}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8501
+              name: http
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: data
+              mountPath: /app/data
+            - name: reports
+              mountPath: /app/reports
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1
+              memory: 1Gi
+      volumes:
+        - name: config
+          configMap:
+            name: stock-ez-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: stock-ez-data
+        - name: reports
+          persistentVolumeClaim:
+            claimName: stock-ez-reports
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: stock-ez-data
+  namespace: homelab
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: stock-ez-reports
+  namespace: homelab
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stock-ez
+  namespace: homelab
+  labels:
+    app: stock-ez
+spec:
+  type: LoadBalancer
+  selector:
+    app: stock-ez
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8501
+      protocol: TCP

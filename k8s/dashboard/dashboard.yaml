@@ -1,0 +1,304 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homelab-dashboard-config
+  namespace: homelab
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  auto;
+    error_log  /var/log/nginx/error.log warn;
+    pid        /var/run/nginx.pid;
+
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      include       /etc/nginx/mime.types;
+      default_type  application/octet-stream;
+      sendfile on;
+      keepalive_timeout 65;
+
+      server {
+        listen 80;
+        server_name _;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        location / {
+          try_files $uri $uri/ /index.html;
+        }
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homelab-dashboard-html
+  namespace: homelab
+data:
+  index.html: |
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Homelab Dashboard</title>
+        <style>
+          :root {
+            --bg: #0f172a;
+            --panel: #111827;
+            --panel-soft: #1f2937;
+            --text: #e5e7eb;
+            --muted: #9ca3af;
+            --accent: #38bdf8;
+            --good: #34d399;
+            --warn: #fbbf24;
+            --bad: #f87171;
+          }
+          * { box-sizing: border-box; }
+          body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(180deg, #020817, #0f172a 50%, #111827);
+            color: var(--text);
+          }
+          .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px 16px 48px;
+          }
+          .hero {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 20px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+          }
+          .hero h1 {
+            margin: 0 0 8px;
+            font-size: clamp(2rem, 4vw, 3rem);
+          }
+          .hero p {
+            margin: 0;
+            color: var(--muted);
+          }
+          .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+          }
+          .card {
+            background: rgba(17, 24, 39, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+          }
+          .status {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+          }
+          .status.up { background: rgba(52,211,153,0.15); color: var(--good); }
+          .status.warn { background: rgba(251,191,36,0.15); color: var(--warn); }
+          .card h3 {
+            margin: 0 0 8px;
+            font-size: 1.1rem;
+          }
+          .card p, .card li {
+            color: var(--muted);
+            line-height: 1.6;
+          }
+          ul {
+            padding-left: 18px;
+            margin: 12px 0 0;
+          }
+          .table {
+            margin-top: 20px;
+            background: rgba(17, 24, 39, 0.9);
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            overflow: hidden;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          th, td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+            text-align: left;
+          }
+          th {
+            background: rgba(30, 41, 59, 0.9);
+            color: #f8fafc;
+          }
+          td {
+            color: var(--text);
+          }
+          @media (max-width: 640px) {
+            .container { padding: 16px 12px 32px; }
+            .hero { padding: 16px 18px; }
+            .card { padding: 14px; }
+            th, td { padding: 10px 12px; font-size: 0.9rem; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <header class="hero">
+            <h1>Homelab Dashboard</h1>
+            <p>Private service overview for your cluster, stock monitoring, and management tools.</p>
+          </header>
+
+          <section class="grid">
+            <article class="card">
+              <span class="status up">Online</span>
+              <h3>Stock-EZ</h3>
+              <p>AI-driven stock and portfolio analysis powered by Ollama.</p>
+              <ul>
+                <li>URL: http://stock-ez.homelab.local</li>
+                <li>Port: 80 / 8501</li>
+              </ul>
+            </article>
+            <article class="card">
+              <span class="status up">Online</span>
+              <h3>Ollama</h3>
+              <p>Local LLM runtime for the Stock-EZ analysis pipeline.</p>
+              <ul>
+                <li>URL: http://ollama.homelab.local:11434</li>
+                <li>Model store: persistent PVC</li>
+              </ul>
+            </article>
+            <article class="card">
+              <span class="status warn">Managed</span>
+              <h3>Portainer</h3>
+              <p>Container operations and visual lifecycle management.</p>
+              <ul>
+                <li>URL: http://portainer.homelab.local</li>
+                <li>Use for containers and volume management</li>
+              </ul>
+            </article>
+            <article class="card">
+              <span class="status up">Reachable</span>
+              <h3>LAN Access</h3>
+              <p>Services are exposed through ingress, node ports, or a load balancer.</p>
+              <ul>
+                <li>Cluster: homelab namespace</li>
+                <li>DNS: local LAN or /etc/hosts</li>
+              </ul>
+            </article>
+          </section>
+
+          <section class="table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Internal</th>
+                  <th>External</th>
+                  <th>Purpose</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Stock-EZ</td>
+                  <td>http://stock-ez:80</td>
+                  <td>http://stock-ez.homelab.local</td>
+                  <td>Portfolio and market analysis UI</td>
+                </tr>
+                <tr>
+                  <td>Ollama</td>
+                  <td>http://ollama:11434</td>
+                  <td>http://ollama.homelab.local:11434</td>
+                  <td>Local LLM backend</td>
+                </tr>
+                <tr>
+                  <td>Dashboard</td>
+                  <td>http://homelab-dashboard:80</td>
+                  <td>http://dashboard.homelab.local</td>
+                  <td>Overview and service discovery</td>
+                </tr>
+                <tr>
+                  <td>Portainer</td>
+                  <td>http://portainer:9000</td>
+                  <td>http://portainer.homelab.local</td>
+                  <td>Container dashboard and management</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homelab-dashboard
+  namespace: homelab
+  labels:
+    app: homelab-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homelab-dashboard
+  template:
+    metadata:
+      labels:
+        app: homelab-dashboard
+    spec:
+      containers:
+        - name: homelab-dashboard
+          image: ${DASHBOARD_IMAGE}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: app-content
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: homelab-dashboard-config
+        - name: app-content
+          configMap:
+            name: homelab-dashboard-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homelab-dashboard
+  namespace: homelab
+  labels:
+    app: homelab-dashboard
+spec:
+  type: LoadBalancer
+  selector:
+    app: homelab-dashboard
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
