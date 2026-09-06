@@ -57,6 +57,10 @@
         padding-left: 18px;
         color: var(--muted);
       }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
       @media (max-width: 640px) {
         .hero { padding: 18px; }
         .card { padding: 14px; }
@@ -67,14 +71,14 @@
     <div class="container">
       <header class="hero">
         <h1>Homelab Dashboard</h1>
-        <p>Private monitoring and service overview for local workloads.</p>
+        <p>Private monitoring, service overview, and Reddit news for the local stack.</p>
       </header>
       <section class="grid">
         <article class="card">
           <div class="badge">Live</div>
           <h3>Stock-EZ</h3>
           <ul>
-            <li>http://stock-ez.homelab.home.arpa</li>
+            <li><a href="http://stock-ez.homelab.home.arpa">stock-ez.homelab.home.arpa</a></li>
             <li>Market and portfolio analysis</li>
           </ul>
         </article>
@@ -82,7 +86,7 @@
           <div class="badge">Live</div>
           <h3>Ollama</h3>
           <ul>
-            <li>http://ollama.homelab.home.arpa:11434</li>
+            <li><a href="http://ollama.homelab.home.arpa:11434">ollama.homelab.home.arpa:11434</a></li>
             <li>Local LLM backend</li>
           </ul>
         </article>
@@ -90,7 +94,7 @@
           <div class="badge">Manage</div>
           <h3>Portainer</h3>
           <ul>
-            <li>http://portainer.homelab.home.arpa</li>
+            <li><a href="http://portainer.homelab.home.arpa">portainer.homelab.home.arpa</a></li>
             <li>Container management</li>
           </ul>
         </article>
@@ -98,8 +102,18 @@
           <div class="badge">Bambu A1</div>
           <h3>Home Assistant</h3>
           <ul>
-            <li>http://homeassistant.homelab.home.arpa</li>
+            <li><a href="http://homeassistant.homelab.home.arpa">homeassistant.homelab.home.arpa</a></li>
             <li>Central printer and device dashboard</li>
+          </ul>
+        </article>
+        <article class="card">
+          <div class="badge">News</div>
+          <h3>Reddit Feeds</h3>
+          <ul>
+            <li><a href="https://www.reddit.com/r/selfhosted/">r/selfhosted</a></li>
+            <li><a href="https://www.reddit.com/r/homelab/">r/homelab</a></li>
+            <li><a href="https://www.reddit.com/r/linux/">r/linux</a></li>
+            <li><a href="https://www.reddit.com/r/sysadmin/">r/sysadmin</a></li>
           </ul>
         </article>
       </section>

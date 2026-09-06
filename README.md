@@ -133,16 +133,16 @@ If `pyenv` is not installed yet, install it first and add it to your shell profi
 ## Quick start
 
 1. Bootstrap a Kubernetes cluster (for example k3s or k8s on your homelab node).
-2. Ensure `kubectl` is configured to the cluster.
-3. Review and edit `.env.example` if you want non-default values.
-4. Run the deployment script:
+1. Ensure `kubectl` is configured to the cluster.
+1. Review and edit `.env.example` if you want non-default values.
+1. Run the deployment script:
 
 ```bash
 chmod +x scripts/*.sh
 ./scripts/deploy.sh
 ```
 
-5. Check resources:
+1. Check resources:
 
 ```bash
 kubectl get pods -n homelab
@@ -303,7 +303,9 @@ And install the Kubernetes device plugin:
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.2/nvidia-device-plugin.yml
 ```
+
 For the full host-side troubleshooting notes, including the exact `nvidia-ctk`/containerd fixes and the symptoms seen on this NixOS setup, see [docs/nvidia-gpu-troubleshooting.md](docs/nvidia-gpu-troubleshooting.md).
+
 ## Recommended prerequisites
 
 - Kubernetes cluster with storage class available (`longhorn`, `openebs`, or local-path)

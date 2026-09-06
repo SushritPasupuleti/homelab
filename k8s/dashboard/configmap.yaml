@@ -1,0 +1,488 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homelab-dashboard-config
+  namespace: homelab
+data:
+  glance.yml: |
+    theme:
+      background-color: 240 10 17
+      primary-color: 267 84 78
+      positive-color: 115 54 76
+      negative-color: 347 88 70
+      contrast-multiplier: 1.12
+      text-saturation-multiplier: 1.1
+      disable-picker: true
+
+    pages:
+      - name: Overview
+        head-widgets:
+          - type: calendar
+            title: Calendar
+
+        columns:
+          - size: small
+            widgets:
+              - type: clock
+                title: Local time
+                hour-format: 24h
+
+              - type: server-stats
+                title: System performance
+                cache: 20s
+                servers:
+                  - type: local
+                    name: Homelab host
+                    hide-swap: false
+                    mountpoints:
+                      "/":
+                        name: Root
+                      "/var/lib/docker":
+                        name: Docker
+                      "/var/lib/rancher/k3s":
+                        name: k3s
+
+              - type: monitor
+                title: Service health
+                style: compact
+                cache: 30s
+                sites:
+                  - title: Dashboard
+                    url: http://homelab-dashboard
+                  - title: Stock-EZ
+                    url: http://stock-ez
+                  - title: Portainer
+                    url: http://portainer:9000
+                  - title: Grafana
+                    url: http://grafana:3000
+                  - title: Prometheus
+                    url: http://prometheus:9090
+                  - title: Ollama
+                    url: http://ollama:11434
+                  - title: Open WebUI
+                    url: http://open-webui
+                  - title: Home Assistant
+                    url: http://home-assistant:8123
+                  - title: Jellyfin
+                    url: http://jellyfin:8096
+                  - title: Plex
+                    url: http://plex:32400
+                  - title: qBittorrent
+                    url: http://qbittorrent:8080
+                  - title: File Browser
+                    url: http://filebrowser
+
+              - type: monitor
+                title: Service uptime + response
+                style: compact
+                cache: 60s
+                sites:
+                  - title: Dashboard
+                    url: http://homelab-dashboard
+                  - title: Stock-EZ
+                    url: http://stock-ez
+                  - title: Portainer
+                    url: http://portainer:9000
+                  - title: Grafana
+                    url: http://grafana:3000
+                  - title: Prometheus
+                    url: http://prometheus:9090
+                  - title: Open WebUI
+                    url: http://open-webui
+                  - title: Home Assistant
+                    url: http://home-assistant:8123
+                  - title: Ollama API
+                    url: http://ollama:11434/api/version
+
+              - type: bookmarks
+                title: Core services
+                groups:
+                  - title: Infrastructure
+                    links:
+                      - title: Dashboard
+                        url: http://dashboard.homelab.home.arpa
+                      - title: Portainer
+                        url: http://portainer.homelab.home.arpa
+                      - title: Grafana
+                        url: http://grafana.homelab.home.arpa
+                      - title: Prometheus
+                        url: http://prometheus.homelab.home.arpa
+                  - title: Apps
+                    links:
+                      - title: Stock-EZ
+                        url: http://stock-ez.homelab.home.arpa
+                      - title: Home Assistant
+                        url: http://homeassistant.homelab.home.arpa
+                      - title: Open WebUI
+                        url: http://open-webui.homelab.home.arpa
+                      - title: Ollama
+                        url: http://ollama.homelab.home.arpa:11434
+
+          - size: full
+            widgets:
+              - type: split-column
+                widgets:
+                  - type: custom-api
+                    title: Cluster pods
+                    cache: 30s
+                    url: http://prometheus:9090/api/v1/query?query=count%28kube_pod_info%7Bnamespace%3D%22homelab%22%7D%29%20or%20vector%280%29
+                    template: |
+                      {{ $value := .JSON.Float "data.result.0.value.1" }}
+                      <div class="size-h1 color-primary">{{ printf "%.0f" $value }}</div>
+                      <div class="color-subtle">pods</div>
+
+                  - type: custom-api
+                    title: CPU use
+                    cache: 30s
+                    url: http://prometheus:9090/api/v1/query?query=100%20*%20(1%20-%20avg(rate(node_cpu_seconds_total%7Bmode%3D%22idle%22%7D%5B5m%5D)))%20or%20vector%280%29
+                    template: |
+                      {{ $value := .JSON.Float "data.result.0.value.1" }}
+                      <div class="size-h1 color-primary">{{ printf "%.0f" $value }}%</div>
+                      <div class="color-subtle">CPU</div>
+
+              - type: split-column
+                widgets:
+                  - type: custom-api
+                    title: Memory use
+                    cache: 30s
+                    url: http://prometheus:9090/api/v1/query?query=100%20*%20(1%20-%20(node_memory_MemAvailable_bytes%20/%20node_memory_MemTotal_bytes))%20or%20vector%280%29
+                    template: |
+                      {{ $value := .JSON.Float "data.result.0.value.1" }}
+                      <div class="size-h1 color-primary">{{ printf "%.0f" $value }}%</div>
+                      <div class="color-subtle">RAM</div>
+
+                  - type: custom-api
+                    title: Network throughput
+                    cache: 30s
+                    url: http://prometheus:9090/api/v1/query?query=sum(rate(node_network_receive_bytes_total%5B5m%5D))%20%2B%20sum(rate(node_network_transmit_bytes_total%5B5m%5D))%20or%20vector%280%29
+                    template: |
+                      {{ $value := .JSON.Float "data.result.0.value.1" }}
+                      <div class="size-h1 color-primary">{{ printf "%.0f" $value }}</div>
+                      <div class="color-subtle">B/s</div>
+
+              - type: split-column
+                widgets:
+                  - type: custom-api
+                    title: K3s nodes
+                    cache: 30s
+                    url: http://prometheus:9090/api/v1/query?query=count(kube_node_status_condition%7Bcondition%3D%22Ready%22%2Cstatus%3D%22true%22%7D)%20or%20vector%280%29
+                    template: |
+                      {{ $value := .JSON.Float "data.result.0.value.1" }}
+                      <div class="size-h1 color-primary">{{ printf "%.0f" $value }}</div>
+                      <div class="color-subtle">nodes ready</div>
+
+                  - type: custom-api
+                    title: Root disk use
+                    cache: 30s
+                    url: http://prometheus:9090/api/v1/query?query=100%20*%20(1%20-%20avg(node_filesystem_avail_bytes%7Bmountpoint%3D%22%2F%22%7D%20/%20node_filesystem_size_bytes%7Bmountpoint%3D%22%2F%22%7D))%20or%20vector%280%29
+                    template: |
+                      {{ $value := .JSON.Float "data.result.0.value.1" }}
+                      <div class="size-h1 color-primary">{{ printf "%.0f" $value }}%</div>
+                      <div class="color-subtle">disk used</div>
+
+              - type: monitor
+                title: Home services
+                style: compact
+                cache: 30s
+                sites:
+                  - title: Home Assistant
+                    url: http://home-assistant:8123
+                  - title: Open WebUI
+                    url: http://open-webui
+                  - title: Jellyfin
+                    url: http://jellyfin:8096
+                  - title: Plex
+                    url: http://plex:32400
+                  - title: qBittorrent
+                    url: http://qbittorrent:8080
+                  - title: File Browser
+                    url: http://filebrowser
+
+              - type: bookmarks
+                title: Media and downloads
+                groups:
+                  - title: Media
+                    links:
+                      - title: Jellyfin
+                        url: http://media.homelab.home.arpa
+                      - title: Plex
+                        url: http://plex.homelab.home.arpa
+                  - title: Downloads
+                    links:
+                      - title: qBittorrent
+                        url: http://torrent.homelab.home.arpa
+                      - title: File Browser
+                        url: http://files.homelab.home.arpa
+                  - title: LAN access
+                    links:
+                      - title: Stock-EZ (IP)
+                        url: http://192.168.1.201
+                      - title: Portainer (IP)
+                        url: http://192.168.1.6:30900
+                      - title: Home Assistant (IP)
+                        url: http://192.168.1.202:8123
+                      - title: Open WebUI (IP)
+                        url: http://192.168.1.209
+                      - title: Grafana (IP)
+                        url: http://192.168.1.210:3000
+                      - title: Ollama (IP)
+                        url: http://192.168.1.207:11434
+
+      - name: Monitoring
+        columns:
+          - size: small
+            widgets:
+              - type: monitor
+                title: Monitoring endpoints
+                style: compact
+                cache: 30s
+                sites:
+                  - title: Grafana
+                    url: http://grafana:3000
+                  - title: Prometheus
+                    url: http://prometheus:9090
+                  - title: Portainer
+                    url: http://portainer:9000
+                  - title: Open WebUI
+                    url: http://open-webui
+
+              - type: bookmarks
+                title: Monitoring quick links
+                groups:
+                  - title: Dashboards
+                    links:
+                      - title: Grafana
+                        url: http://grafana.homelab.home.arpa
+                      - title: Prometheus
+                        url: http://prometheus.homelab.home.arpa
+                      - title: Dashboard
+                        url: http://dashboard.homelab.home.arpa
+
+          - size: full
+            widgets:
+              - type: iframe
+                title: Homelab dashboard
+                source: http://grafana.homelab.home.arpa/d/home/homelab-overview?orgId=1&theme=dark&kiosk
+                height: 860
+
+              - type: custom-api
+                title: Prometheus target health
+                cache: 30s
+                url: http://prometheus:9090/api/v1/query?query=up%7Bjob%3D~%22.%2B%22%7D%20or%20vector%280%29
+                template: |
+                  {{ $value := .JSON.Float "data.result.0.value.1" }}
+                  <div class="size-h1 color-primary">{{ printf "%.0f" $value }}</div>
+                  <div class="color-subtle">targets up</div>
+
+      - name: News
+        columns:
+          - size: full
+            widgets:
+              - type: videos
+                title: YouTube tech & homelab
+                style: horizontal-cards
+                limit: 8
+                channels:
+                  - UCXuqSBlHAE6Xw-yeJA0Tunw
+                  - UCBJycsmduvYEL83R_U4JriQ
+                  - UCHnyfMqiRRG1u-2MsSQLbXA
+                  - UCvSXMi2LebwJEM1s4bz5IBA
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Self-Hosted
+                    subreddit: selfhosted
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Homelab
+                    subreddit: homelab
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Linux
+                    subreddit: linux
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Sysadmin
+                    subreddit: sysadmin
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+      - name: Ollama
+        columns:
+          - size: small
+            widgets:
+              - type: custom-api
+                title: Deployment mode
+                cache: 30s
+                url: http://ollama:11434/api/ps
+                template: |
+                  {{ $models := .JSON.Array "models" }}
+                  {{ $mode := "CPU" }}
+                  {{ range $model := $models }}
+                    {{ if $model.Get "size_vram" }}{{ $mode = "GPU" }}{{ break }}{{ end }}
+                  {{ end }}
+                  <div class="size-h1 color-primary">{{ $mode }}</div>
+                  <div class="color-subtle">execution mode</div>
+                  <div class="margin-top-5 color-subtle">
+                    {{ if eq $mode "GPU" }}VRAM is active for loaded models{{ else }}No VRAM reported in the active model set{{ end }}
+                  </div>
+
+              - type: custom-api
+                title: Loaded models
+                cache: 15s
+                url: http://ollama:11434/api/ps
+                template: |
+                  {{ $models := .JSON.Array "models" }}
+                  {{ if eq (len $models) 0 }}
+                    <p class="color-subtle">No models are currently loaded.</p>
+                  {{ else }}
+                    {{ range $model := $models }}
+                      {{ $name := $model.Get "name" }}
+                      {{ $size := $model.Get "size" }}
+                      {{ $vram := $model.Get "size_vram" }}
+                      <div class="list-item margin-bottom-8">
+                        <div><strong>{{ $name.String }}</strong></div>
+                        <div class="color-subtle">
+                          {{ if $size.String }}{{ $size.String }} bytes{{ end }}
+                          {{ if $vram.String }} · VRAM {{ $vram.String }} bytes{{ end }}
+                        </div>
+                      </div>
+                    {{ end }}
+                  {{ end }}
+
+              - type: monitor
+                title: Ollama endpoints
+                style: compact
+                cache: 30s
+                sites:
+                  - title: Ollama API
+                    url: http://ollama:11434
+                  - title: Open WebUI
+                    url: http://open-webui
+                  - title: Grafana
+                    url: http://grafana:3000
+
+              - type: bookmarks
+                title: Ollama access
+                groups:
+                  - title: Links
+                    links:
+                      - title: Ollama API
+                        url: http://ollama.homelab.home.arpa:11434
+                      - title: Open WebUI
+                        url: http://open-webui.homelab.home.arpa
+                      - title: Model tags
+                        url: http://ollama.homelab.home.arpa:11434/api/tags
+
+          - size: full
+            widgets:
+              - type: custom-api
+                title: Installed model list
+                cache: 60s
+                url: http://ollama:11434/api/tags
+                template: |
+                  {{ $models := .JSON.Array "models" }}
+                  {{ if eq (len $models) 0 }}
+                    <p class="color-subtle">No models are installed yet.</p>
+                  {{ else }}
+                    {{ range $model := $models }}
+                      {{ $name := $model.Get "name" }}
+                      {{ $details := $model.Get "details" }}
+                      {{ $family := $details.Get "family" }}
+                      {{ $parameterSize := $details.Get "parameter_size" }}
+                      {{ $quantization := $details.Get "quantization_level" }}
+                      {{ $format := $details.Get "format" }}
+                      <div class="list-item margin-bottom-8">
+                        <div><strong>{{ $name.String }}</strong></div>
+                        <div class="color-subtle">
+                          {{ if $family.String }}{{ $family.String }} · {{ end }}
+                          {{ if $parameterSize.String }}{{ $parameterSize.String }} · {{ end }}
+                          {{ if $quantization.String }}{{ $quantization.String }}{{ end }}
+                        </div>
+                        <div class="color-subtle">
+                          {{ if $format.String }}Format: {{ $format.String }}{{ end }}
+                        </div>
+                      </div>
+                    {{ end }}
+                  {{ end }}
+
+              - type: custom-api
+                title: Runtime summary
+                cache: 30s
+                url: http://ollama:11434/api/ps
+                template: |
+                  {{ $models := .JSON.Array "models" }}
+                  <div class="color-subtle">Loaded in memory: {{ len $models }} models</div>
+                  <div class="margin-top-10">
+                    {{ if eq (len $models) 0 }}
+                      <p class="color-subtle">No active model runtime data available.</p>
+                    {{ else }}
+                      {{ range $model := $models }}
+                        {{ $name := $model.Get "name" }}
+                        {{ $size := $model.Get "size" }}
+                        {{ $vram := $model.Get "size_vram" }}
+                        <div class="list-item margin-bottom-8">
+                          <div><strong>{{ $name.String }}</strong></div>
+                          <div class="color-subtle">
+                            {{ if $size.String }}Size: {{ $size.String }} bytes{{ end }}
+                            {{ if $vram.String }} · VRAM: {{ $vram.String }} bytes{{ end }}
+                          </div>
+                        </div>
+                      {{ end }}
+                    {{ end }}
+                  </div>
+
+              - type: custom-api
+                title: Server info
+                cache: 30s
+                url: http://ollama:11434/api/version
+                template: |
+                  <div class="color-subtle">Version</div>
+                  <div class="size-h1 color-primary">{{ .JSON.String "version" }}</div>
+                  <div class="margin-top-6 color-subtle">
+                    Open the local API or Open WebUI to inspect model health, requests, and runtime state.
+                  </div>
+
+      - name: Tools
+        columns:
+          - size: small
+            widgets:
+              - type: bookmarks
+                title: External tools
+                groups:
+                  - title: References
+                    links:
+                      - title: GitHub
+                        url: https://github.com
+                      - title: Docker Docs
+                        url: https://docs.docker.com
+                      - title: NixOS Manual
+                        url: https://nixos.org/manual
+
+          - size: full
+            widgets:
+              - type: bookmarks
+                title: Internal tools
+                groups:
+                  - title: Services
+                    links:
+                      - title: Dashboard
+                        url: http://dashboard.homelab.home.arpa
+                      - title: Portainer
+                        url: http://portainer.homelab.home.arpa
+                      - title: Home Assistant
+                        url: http://homeassistant.homelab.home.arpa
+                      - title: Grafana
+                        url: http://grafana.homelab.home.arpa
+

@@ -29,6 +29,7 @@ GRAFANA_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD:-$(openssl rand -base64 24 | tr
 QBITTORRENT_IMAGE="${QBITTORRENT_IMAGE:-lscr.io/linuxserver/qbittorrent:latest}"
 FILEBROWSER_IMAGE="${FILEBROWSER_IMAGE:-filebrowser/filebrowser:latest}"
 PORTAINER_ADMIN_USER="${PORTAINER_ADMIN_USER:-admin}"
+DCGM_EXPORTER_SCRAPE=""
 PORTAINER_ADMIN_PASSWORD="${PORTAINER_ADMIN_PASSWORD:-$(openssl rand -base64 24 | tr -d '\n' | tr '+/' '-_')}"
 QBITTORRENT_USERNAME="${QBITTORRENT_USERNAME:-admin}"
 QBITTORRENT_PASSWORD="${QBITTORRENT_PASSWORD:-$(openssl rand -base64 24 | tr -d '\n' | tr '+/' '-_')}"
@@ -71,6 +72,15 @@ if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ -z "${NODE_GPU_ALLOCATABLE}" ]; then
 fi
 
 if [ "${OLLAMA_USE_NVIDIA}" = "true" ]; then
+  DCGM_EXPORTER_SCRAPE='
+      - job_name: "dcgm-exporter"
+        static_configs:
+          - targets: ["dcgm-exporter:9400"]'
+else
+  DCGM_EXPORTER_SCRAPE=""
+fi
+
+if [ "${OLLAMA_USE_NVIDIA}" = "true" ]; then
   OLLAMA_RUNTIME_CLASS="nvidia"
   OLLAMA_NVIDIA_VISIBLE_DEVICES="all"
   OLLAMA_NVIDIA_DRIVER_CAPABILITIES="compute,utility"
@@ -90,7 +100,7 @@ else
   OLLAMA_BACKEND_MODE="cpu"
 fi
 
-export NAMESPACE STOCK_EZ_IMAGE OLLAMA_IMAGE DASHBOARD_IMAGE PORTAINER_IMAGE HOME_ASSISTANT_IMAGE OPEN_WEBUI_IMAGE PROMETHEUS_IMAGE GRAFANA_IMAGE GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD QBITTORRENT_IMAGE FILEBROWSER_IMAGE PORTAINER_ADMIN_USER PORTAINER_ADMIN_PASSWORD QBITTORRENT_USERNAME QBITTORRENT_PASSWORD FILEBROWSER_USERNAME FILEBROWSER_PASSWORD STOCK_EZ_HOST DASHBOARD_HOST PORTAINER_HOST HOMEASSISTANT_HOST OPEN_WEBUI_HOST GRAFANA_HOST PROMETHEUS_HOST QBITTORRENT_HOST FILEBROWSER_HOST JELLYFIN_HOST PLEX_HOST DOMAIN METALLB_ENABLED METALLB_IP_POOL HOMEPAGE_ALLOWED_HOSTS HOMELAB_SECRET_FILE OLLAMA_USE_NVIDIA OLLAMA_GPU_COUNT OLLAMA_NUM_GPU OLLAMA_BACKEND_MODE OLLAMA_RUNTIME_CLASS OLLAMA_NVIDIA_VISIBLE_DEVICES OLLAMA_NVIDIA_DRIVER_CAPABILITIES OLLAMA_GPU_REQUEST_KEY OLLAMA_GPU_LIMIT_KEY
+export NAMESPACE STOCK_EZ_IMAGE OLLAMA_IMAGE DASHBOARD_IMAGE PORTAINER_IMAGE HOME_ASSISTANT_IMAGE OPEN_WEBUI_IMAGE PROMETHEUS_IMAGE GRAFANA_IMAGE GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD QBITTORRENT_IMAGE FILEBROWSER_IMAGE PORTAINER_ADMIN_USER PORTAINER_ADMIN_PASSWORD QBITTORRENT_USERNAME QBITTORRENT_PASSWORD FILEBROWSER_USERNAME FILEBROWSER_PASSWORD STOCK_EZ_HOST DASHBOARD_HOST PORTAINER_HOST HOMEASSISTANT_HOST OPEN_WEBUI_HOST GRAFANA_HOST PROMETHEUS_HOST QBITTORRENT_HOST FILEBROWSER_HOST JELLYFIN_HOST PLEX_HOST DOMAIN METALLB_ENABLED METALLB_IP_POOL HOMEPAGE_ALLOWED_HOSTS HOMELAB_SECRET_FILE OLLAMA_USE_NVIDIA OLLAMA_GPU_COUNT OLLAMA_NUM_GPU OLLAMA_BACKEND_MODE OLLAMA_RUNTIME_CLASS OLLAMA_NVIDIA_VISIBLE_DEVICES OLLAMA_NVIDIA_DRIVER_CAPABILITIES OLLAMA_GPU_REQUEST_KEY OLLAMA_GPU_LIMIT_KEY DCGM_EXPORTER_SCRAPE
 
 write_homelab_secrets() {
   mkdir -p "$(dirname "$HOMELAB_SECRET_FILE")"
@@ -164,8 +174,21 @@ path = Path(sys.argv[1])
 text = path.read_text()
 for key, value in sorted(os.environ.items()):
     text = text.replace(f"${{{key}}}", value)
+marker = "      # DCGM_EXPORTER_SCRAPE"
+value = os.environ.get("DCGM_EXPORTER_SCRAPE", "")
+if value:
+    text = text.replace(marker, value.rstrip())
+else:
+    text = text.replace(marker + "\n", "")
 print(text)
 PY
+}
+
+reload_runtime_config() {
+  kubectl rollout restart -n "$NAMESPACE" deployment/prometheus deployment/grafana deployment/homelab-dashboard >/dev/null 2>&1 || true
+  kubectl rollout status -n "$NAMESPACE" deployment/prometheus --timeout=180s || true
+  kubectl rollout status -n "$NAMESPACE" deployment/grafana --timeout=180s || true
+  kubectl rollout status -n "$NAMESPACE" deployment/homelab-dashboard --timeout=180s || true
 }
 
 if [ "${OLLAMA_USE_NVIDIA}" = "true" ]; then
@@ -207,12 +230,17 @@ render_and_apply "$ROOT_DIR/k8s/stock-ez/deployment.yaml"
 render_and_apply "$ROOT_DIR/k8s/ollama/ollama.yaml"
 render_and_apply "$ROOT_DIR/k8s/open-webui/open-webui.yaml"
 render_and_apply "$ROOT_DIR/k8s/home-assistant/home-assistant.yaml"
+render_and_apply "$ROOT_DIR/k8s/dashboard/configmap.yaml"
 render_and_apply "$ROOT_DIR/k8s/dashboard/dashboard.yaml"
 render_and_apply "$ROOT_DIR/k8s/monitoring/monitoring.yaml"
+if [ "${OLLAMA_USE_NVIDIA}" = "true" ]; then
+  render_and_apply "$ROOT_DIR/k8s/monitoring/dcgm-exporter.yaml"
+else
+  kubectl delete -f "$ROOT_DIR/k8s/monitoring/dcgm-exporter.yaml" --ignore-not-found=true >/dev/null 2>&1 || true
+fi
 render_and_apply "$ROOT_DIR/k8s/media/jellyfin.yaml"
 render_and_apply "$ROOT_DIR/k8s/media/minidlna.yaml"
 render_and_apply "$ROOT_DIR/k8s/media/qbittorrent.yaml"
-render_and_apply "$ROOT_DIR/k8s/media/filebrowser.yaml"
 render_and_apply "$ROOT_DIR/k8s/media/plex.yaml"
 render_and_apply "$ROOT_DIR/k8s/ingress/ingress.yaml"
 render_and_apply "$ROOT_DIR/k8s/portainer/portainer.yaml"
@@ -221,15 +249,13 @@ kubectl rollout status -n "$NAMESPACE" deployment/stock-ez --timeout=180s || tru
 kubectl rollout status -n "$NAMESPACE" deployment/ollama --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/open-webui --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/home-assistant --timeout=180s || true
-kubectl rollout status -n "$NAMESPACE" deployment/homelab-dashboard --timeout=180s || true
-kubectl rollout status -n "$NAMESPACE" deployment/prometheus --timeout=180s || true
-kubectl rollout status -n "$NAMESPACE" deployment/grafana --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/jellyfin --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/minidlna --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/qbittorrent --timeout=180s || true
-kubectl rollout status -n "$NAMESPACE" deployment/filebrowser --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/plex --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/portainer --timeout=180s || true
+
+reload_runtime_config
 
 kubectl get svc,ingress,pvc -n "$NAMESPACE"
 

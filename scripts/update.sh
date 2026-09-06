@@ -141,6 +141,7 @@ kubectl set image -n "$NAMESPACE" deployment/filebrowser filebrowser="$FILEBROWS
 render_and_apply "$ROOT_DIR/k8s/stock-ez/configmap.yaml"
 render_and_apply "$ROOT_DIR/k8s/ollama/ollama.yaml"
 render_and_apply "$ROOT_DIR/k8s/open-webui/open-webui.yaml"
+render_and_apply "$ROOT_DIR/k8s/dashboard/configmap.yaml"
 render_and_apply "$ROOT_DIR/k8s/dashboard/dashboard.yaml"
 render_and_apply "$ROOT_DIR/k8s/monitoring/monitoring.yaml"
 render_and_apply "$ROOT_DIR/k8s/home-assistant/home-assistant.yaml"
