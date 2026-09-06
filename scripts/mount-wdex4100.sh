@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NAS_HOST="${NAS_HOST:-WDEX4100.local}"
+NAS_HOST="${NAS_HOST:-192.168.1.11}"
 REMOTE_PATH="${REMOTE_PATH:-/Volume_1/Media}"
 MOUNT_POINT="${MOUNT_POINT:-/mnt/wdex4100/media}"
 USER="${USER:-admin}"

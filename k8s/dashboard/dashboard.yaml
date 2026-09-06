@@ -4,256 +4,371 @@ metadata:
   name: homelab-dashboard-config
   namespace: homelab
 data:
-  nginx.conf: |
-    user  nginx;
-    worker_processes  auto;
-    error_log  /var/log/nginx/error.log warn;
-    pid        /var/run/nginx.pid;
+  glance.yml: |
+    theme:
+      background-color: 240 9 12
+      primary-color: 214 90 55
+      positive-color: 150 70 55
+      negative-color: 0 75 60
+      contrast-multiplier: 1.1
 
-    events {
-      worker_connections 1024;
-    }
+    pages:
+      - name: Overview
+        columns:
+          - size: small
+            widgets:
+              - type: clock
+                title: Local Time
+                hour-format: 24h
 
-    http {
-      include       /etc/nginx/mime.types;
-      default_type  application/octet-stream;
-      sendfile on;
-      keepalive_timeout 65;
+              - type: monitor
+                title: Service connectivity
+                style: compact
+                cache: 30s
+                sites:
+                  - title: Dashboard
+                    url: http://dashboard.homelab.home.arpa
+                    icon: si:glance
+                  - title: Stock-EZ
+                    url: http://stock-ez.homelab.home.arpa
+                    icon: si:streamlit
+                  - title: Portainer
+                    url: http://portainer.homelab.home.arpa
+                    icon: si:docker
+                  - title: Home Assistant
+                    url: http://homeassistant.homelab.home.arpa
+                    icon: si:homeassistant
+                  - title: Open WebUI
+                    url: http://open-webui.homelab.home.arpa
+                    icon: si:openai
+                  - title: Grafana
+                    url: http://grafana.homelab.home.arpa
+                    icon: si:grafana
+                  - title: Prometheus
+                    url: http://prometheus.homelab.home.arpa
+                    icon: si:prometheus
+                  - title: Ollama (${OLLAMA_BACKEND_MODE})
+                    url: http://ollama.homelab.home.arpa:11434
+                    icon: si:ollama
+                  - title: qBittorrent
+                    url: http://torrent.homelab.home.arpa
+                    icon: si:qbittorrent
+                  - title: File Browser
+                    url: http://files.homelab.home.arpa
+                    icon: si:folder
 
-      server {
-        listen 80;
-        server_name _;
+              - type: bookmarks
+                title: Fast access
+                groups:
+                  - title: Critical apps
+                    links:
+                      - title: Stock-EZ
+                        url: http://stock-ez.homelab.home.arpa
+                        icon: si:streamlit
+                      - title: Portainer
+                        url: http://portainer.homelab.home.arpa
+                        icon: si:docker
+                      - title: Grafana
+                        url: http://grafana.homelab.home.arpa
+                        icon: si:grafana
+                      - title: Ollama
+                        url: http://ollama.homelab.home.arpa:11434
+                        icon: si:ollama
 
-        root /usr/share/nginx/html;
-        index index.html;
+          - size: full
+            widgets:
+              - type: server-stats
+                title: System Performance
+                cache: 20s
+                servers:
+                  - type: local
+                    name: Homelab Node
+                    hide-swap: false
+                    mountpoints:
+                      "/":
+                        name: Root
+                      "/var/lib/docker":
+                        name: Docker Storage
+                      "/var/lib/rancher/k3s":
+                        name: k3s Storage
 
-        location / {
-          try_files $uri $uri/ /index.html;
-        }
-      }
-    }
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: homelab-dashboard-html
-  namespace: homelab
-data:
-  index.html: |
-    <!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Homelab Dashboard</title>
-        <style>
-          :root {
-            --bg: #0f172a;
-            --panel: #111827;
-            --panel-soft: #1f2937;
-            --text: #e5e7eb;
-            --muted: #9ca3af;
-            --accent: #38bdf8;
-            --good: #34d399;
-            --warn: #fbbf24;
-            --bad: #f87171;
-          }
-          * { box-sizing: border-box; }
-          body {
-            margin: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            background: linear-gradient(180deg, #020817, #0f172a 50%, #111827);
-            color: var(--text);
-          }
-          .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 24px 16px 48px;
-          }
-          .hero {
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(148, 163, 184, 0.25);
-            border-radius: 20px;
-            padding: 20px 24px;
-            margin-bottom: 24px;
-          }
-          .hero h1 {
-            margin: 0 0 8px;
-            font-size: clamp(2rem, 4vw, 3rem);
-          }
-          .hero p {
-            margin: 0;
-            color: var(--muted);
-          }
-          .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
-          }
-          .card {
-            background: rgba(17, 24, 39, 0.9);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 18px;
-            padding: 18px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-          }
-          .status {
-            display: inline-block;
-            padding: 6px 10px;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-          }
-          .status.up { background: rgba(52,211,153,0.15); color: var(--good); }
-          .status.warn { background: rgba(251,191,36,0.15); color: var(--warn); }
-          .card h3 {
-            margin: 0 0 8px;
-            font-size: 1.1rem;
-          }
-          .card p, .card li {
-            color: var(--muted);
-            line-height: 1.6;
-          }
-          ul {
-            padding-left: 18px;
-            margin: 12px 0 0;
-          }
-          .table {
-            margin-top: 20px;
-            background: rgba(17, 24, 39, 0.9);
-            border-radius: 18px;
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            overflow: hidden;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          th, td {
-            padding: 14px 16px;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
-            text-align: left;
-          }
-          th {
-            background: rgba(30, 41, 59, 0.9);
-            color: #f8fafc;
-          }
-          td {
-            color: var(--text);
-          }
-          @media (max-width: 640px) {
-            .container { padding: 16px 12px 32px; }
-            .hero { padding: 16px 18px; }
-            .card { padding: 14px; }
-            th, td { padding: 10px 12px; font-size: 0.9rem; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <header class="hero">
-            <h1>Homelab Dashboard</h1>
-            <p>Private service overview for your cluster, stock monitoring, and management tools.</p>
-          </header>
+              - type: monitor
+                title: Cluster pods & services
+                style: compact
+                cache: 30s
+                sites:
+                  - title: Ingress
+                    url: http://dashboard.homelab.home.arpa
+                    icon: si:nginx
+                  - title: Prometheus
+                    url: http://prometheus.homelab.home.arpa
+                    icon: si:prometheus
+                  - title: Grafana
+                    url: http://grafana.homelab.home.arpa
+                    icon: si:grafana
+                  - title: Portainer
+                    url: http://portainer.homelab.home.arpa
+                    icon: si:docker
+                  - title: Home Assistant
+                    url: http://homeassistant.homelab.home.arpa
+                    icon: si:homeassistant
+                  - title: Jellyfin
+                    url: http://media.homelab.home.arpa
+                    icon: si:jellyfin
+                  - title: Plex
+                    url: http://plex.homelab.home.arpa
+                    icon: si:plex
+                  - title: qBittorrent
+                    url: http://torrent.homelab.home.arpa
+                    icon: si:qbittorrent
+                  - title: File Browser
+                    url: http://files.homelab.home.arpa
+                    icon: si:folder
+                  - title: Open WebUI
+                    url: http://open-webui.homelab.home.arpa
+                    icon: si:openai
 
-          <section class="grid">
-            <article class="card">
-              <span class="status up">Online</span>
-              <h3>Stock-EZ</h3>
-              <p>AI-driven stock and portfolio analysis powered by Ollama.</p>
-              <ul>
-                <li>URL: http://stock-ez.homelab.local</li>
-                <li>Port: 80 / 8501</li>
-              </ul>
-            </article>
-            <article class="card">
-              <span class="status up">Online</span>
-              <h3>Ollama</h3>
-              <p>Local LLM runtime for the Stock-EZ analysis pipeline.</p>
-              <ul>
-                <li>URL: http://ollama.homelab.local:11434</li>
-                <li>Model store: persistent PVC</li>
-              </ul>
-            </article>
-            <article class="card">
-              <span class="status warn">Managed</span>
-              <h3>Portainer</h3>
-              <p>Container operations and visual lifecycle management.</p>
-              <ul>
-                <li>URL: http://portainer.homelab.local</li>
-                <li>Use for containers and volume management</li>
-              </ul>
-            </article>
-            <article class="card">
-              <span class="status up">Bambu A1</span>
-              <h3>Home Assistant</h3>
-              <p>Central, mobile-friendly endpoint for printer and device management.</p>
-              <ul>
-                <li>URL: http://homeassistant.homelab.local</li>
-                <li>Add your Bambu printer via Home Assistant integrations</li>
-              </ul>
-            </article>
-            <article class="card">
-              <span class="status up">Reachable</span>
-              <h3>LAN Access</h3>
-              <p>Services are exposed through ingress, node ports, or a load balancer.</p>
-              <ul>
-                <li>Cluster: homelab namespace</li>
-                <li>DNS: local LAN or /etc/hosts</li>
-              </ul>
-            </article>
-          </section>
+              - type: split-column
+                widgets:
+                  - type: iframe
+                    title: Grafana Overview
+                    source: http://grafana.homelab.home.arpa/d-solo/home/home?orgId=1&panelId=1&theme=dark&refresh=30s
+                    height: 340
+                  - type: iframe
+                    title: Node health
+                    source: http://grafana.homelab.home.arpa/d-solo/home/home?orgId=1&panelId=2&theme=dark&refresh=30s
+                    height: 340
 
-          <section class="table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Service</th>
-                  <th>Internal</th>
-                  <th>External</th>
-                  <th>Purpose</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Stock-EZ</td>
-                  <td>http://stock-ez:80</td>
-                  <td>http://stock-ez.homelab.local</td>
-                  <td>Portfolio and market analysis UI</td>
-                </tr>
-                <tr>
-                  <td>Ollama</td>
-                  <td>http://ollama:11434</td>
-                  <td>http://ollama.homelab.local:11434</td>
-                  <td>Local LLM backend</td>
-                </tr>
-                <tr>
-                  <td>Dashboard</td>
-                  <td>http://homelab-dashboard:80</td>
-                  <td>http://dashboard.homelab.local</td>
-                  <td>Overview and service discovery</td>
-                </tr>
-                <tr>
-                  <td>Portainer</td>
-                  <td>http://portainer:9000</td>
-                  <td>http://portainer.homelab.local</td>
-                  <td>Container dashboard and management</td>
-                </tr>
-                <tr>
-                  <td>Home Assistant</td>
-                  <td>http://home-assistant:8123</td>
-                  <td>http://homeassistant.homelab.local</td>
-                  <td>Mobile-friendly central automation and Bambu A1 integration</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
-        </div>
-      </body>
-    </html>
+              - type: split-column
+                widgets:
+                  - type: iframe
+                    title: CPU + Memory
+                    source: http://grafana.homelab.home.arpa/d-solo/home/home?orgId=1&panelId=3&theme=dark&refresh=30s
+                    height: 300
+                  - type: iframe
+                    title: Network + traffic
+                    source: http://grafana.homelab.home.arpa/d-solo/home/home?orgId=1&panelId=4&theme=dark&refresh=30s
+                    height: 300
+
+              - type: bookmarks
+                title: Homelab Links
+                groups:
+                  - title: Core Services
+                    links:
+                      - title: Stock-EZ
+                        url: http://stock-ez.homelab.home.arpa
+                        icon: si:streamlit
+                      - title: Portainer
+                        url: http://portainer.homelab.home.arpa
+                        icon: si:docker
+                      - title: Home Assistant
+                        url: http://homeassistant.homelab.home.arpa
+                        icon: si:homeassistant
+                      - title: Open WebUI
+                        url: http://open-webui.homelab.home.arpa
+                        icon: si:openai
+                      - title: Grafana
+                        url: http://grafana.homelab.home.arpa
+                        icon: si:grafana
+                      - title: Prometheus
+                        url: http://prometheus.homelab.home.arpa
+                        icon: si:prometheus
+                      - title: qBittorrent
+                        url: http://torrent.homelab.home.arpa
+                        icon: si:qbittorrent
+                      - title: File Browser
+                        url: http://files.homelab.home.arpa
+                        icon: si:folder
+                      - title: Ollama (${OLLAMA_BACKEND_MODE})
+                        url: http://ollama.homelab.home.arpa:11434
+                        icon: si:ollama
+                  - title: Media
+                    links:
+                      - title: Jellyfin
+                        url: http://media.homelab.home.arpa
+                        icon: si:jellyfin
+                      - title: Plex
+                        url: http://plex.homelab.home.arpa
+                        icon: si:plex
+                  - title: LAN Access
+                    links:
+                      - title: Stock-EZ (IP)
+                        url: http://192.168.1.201
+                        icon: si:streamlit
+                      - title: Portainer (IP)
+                        url: http://192.168.1.6:30900
+                        icon: si:docker
+                      - title: Home Assistant (IP)
+                        url: http://192.168.1.202:8123
+                        icon: si:homeassistant
+                      - title: Open WebUI (IP)
+                        url: http://192.168.1.209
+                        icon: si:openai
+                      - title: Grafana (IP)
+                        url: http://192.168.1.210:3000
+                        icon: si:grafana
+                      - title: Ollama (IP)
+                        url: http://192.168.1.207:11434
+                        icon: si:ollama
+
+      - name: Ollama
+        columns:
+          - size: small
+            widgets:
+              - type: custom-api
+                title: Ollama version
+                cache: 1m
+                url: http://ollama.homelab.home.arpa:11434/api/version
+                template: |
+                  <div class="size-h1 color-primary">{{ .JSON.String "version" }}</div>
+                  <div class="color-subtle">Local API build</div>
+                  <div class="margin-top-10">
+                    <a href="http://ollama.homelab.home.arpa:11434" target="_blank" rel="noreferrer">Open API</a>
+                  </div>
+
+              - type: custom-api
+                title: Loaded models
+                cache: 15s
+                url: http://ollama.homelab.home.arpa:11434/api/ps
+                template: |
+                  {{ $models := .JSON.Array "models" }}
+                  {{ if eq (len $models) 0 }}
+                    <p class="color-subtle">No models are currently loaded.</p>
+                  {{ else }}
+                    {{ range $idx, $model := $models }}
+                      {{ if lt $idx 6 }}
+                        <div class="list-item margin-bottom-5">
+                          <div><strong>{{ $model.name }}</strong></div>
+                          {{ if $model.details }}
+                            <div class="color-subtle">
+                              {{ if $model.details.parameter_size }}{{ $model.details.parameter_size }} · {{ end }}
+                              {{ if $model.details.quantization_level }}{{ $model.details.quantization_level }}{{ end }}
+                            </div>
+                          {{ end }}
+                        </div>
+                      {{ end }}
+                    {{ end }}
+                  {{ end }}
+
+              - type: monitor
+                title: Ollama endpoints
+                style: compact
+                cache: 30s
+                sites:
+                  - title: Ollama API
+                    url: http://ollama.homelab.home.arpa:11434
+                    icon: si:ollama
+                  - title: Open WebUI
+                    url: http://open-webui.homelab.home.arpa
+                    icon: si:openai
+                  - title: Grafana
+                    url: http://grafana.homelab.home.arpa
+                    icon: si:grafana
+
+          - size: full
+            widgets:
+              - type: custom-api
+                title: Installed models
+                cache: 5m
+                url: http://ollama.homelab.home.arpa:11434/api/tags
+                template: |
+                  {{ $models := .JSON.Array "models" }}
+                  <div class="color-subtle">Local inventory: {{ len $models }} models</div>
+                  <div class="margin-top-10">
+                    {{ range $model := $models }}
+                      <div class="list-item margin-bottom-8">
+                        <div><strong>{{ $model.name }}</strong></div>
+                        <div class="color-subtle">
+                          {{ if $model.details }}
+                            {{ if $model.details.family }}{{ $model.details.family }} · {{ end }}
+                            {{ if $model.details.parameter_size }}{{ $model.details.parameter_size }} · {{ end }}
+                            {{ if $model.details.quantization_level }}{{ $model.details.quantization_level }}{{ end }}
+                          {{ end }}
+                        </div>
+                        <div class="color-subtle">Size: {{ $model.size }} bytes</div>
+                      </div>
+                    {{ end }}
+                  </div>
+
+              - type: custom-api
+                title: Model metadata
+                cache: 5m
+                url: http://ollama.homelab.home.arpa:11434/api/show
+                body-type: json
+                body:
+                  model: llama3.2
+                template: |
+                  {{ $details := .JSON.Get "details" }}
+                  {{ if not $details }}
+                    <p class="color-subtle">No model metadata returned by the API.</p>
+                  {{ else }}
+                    <div class="color-subtle">Default model metadata</div>
+                    <div class="margin-top-10">
+                      <div><strong>Family:</strong> {{ $details.String "family" }}</div>
+                      <div><strong>Parameters:</strong> {{ $details.String "parameter_size" }}</div>
+                      <div><strong>Format:</strong> {{ $details.String "format" }}</div>
+                      <div><strong>Quantization:</strong> {{ $details.String "quantization_level" }}</div>
+                    </div>
+                  {{ end }}
+
+              - type: bookmarks
+                title: Ollama quick links
+                groups:
+                  - title: Access
+                    links:
+                      - title: Ollama API
+                        url: http://ollama.homelab.home.arpa:11434
+                        icon: si:ollama
+                      - title: Open WebUI
+                        url: http://open-webui.homelab.home.arpa
+                        icon: si:openai
+                      - title: Grafana
+                        url: http://grafana.homelab.home.arpa
+                        icon: si:grafana
+
+      - name: Tools
+        columns:
+          - size: small
+            widgets:
+              - type: bookmarks
+                title: Quick Links
+                groups:
+                  - title: External
+                    links:
+                      - title: GitHub
+                        url: https://github.com
+                        icon: si:github
+                      - title: VS Code
+                        url: https://code.visualstudio.com
+                        icon: si:visualstudiocode
+                      - title: Docker Docs
+                        url: https://docs.docker.com
+                        icon: si:docker
+                      - title: NixOS Manual
+                        url: https://nixos.org/manual
+                        icon: si:nixos
+          - size: full
+            widgets:
+              - type: bookmarks
+                title: Admin Tools
+                groups:
+                  - title: Internal
+                    links:
+                      - title: Dashboard
+                        url: http://dashboard.homelab.home.arpa
+                        icon: si:glance
+                      - title: Portainer
+                        url: http://portainer.homelab.home.arpa
+                        icon: si:docker
+                      - title: Open WebUI
+                        url: http://open-webui.homelab.home.arpa
+                        icon: si:openai
+                      - title: Home Assistant
+                        url: http://homeassistant.homelab.home.arpa
+                        icon: si:homeassistant
+                      - title: Grafana
+                        url: http://grafana.homelab.home.arpa
+                        icon: si:grafana
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -277,29 +392,34 @@ spec:
           image: ${DASHBOARD_IMAGE}
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 80
+            - containerPort: 8080
               name: http
+          env:
+            - name: PORT
+              value: "8080"
+            - name: OLLAMA_BACKEND_MODE
+              value: "${OLLAMA_BACKEND_MODE}"
           volumeMounts:
-            - name: nginx-config
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
-            - name: app-content
-              mountPath: /usr/share/nginx/html/index.html
-              subPath: index.html
+            - name: dashboard-config
+              mountPath: /app/config
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+              readOnly: true
           resources:
             requests:
               cpu: 50m
-              memory: 64Mi
+              memory: 128Mi
             limits:
-              cpu: 200m
-              memory: 256Mi
+              cpu: 500m
+              memory: 512Mi
       volumes:
-        - name: nginx-config
+        - name: dashboard-config
           configMap:
             name: homelab-dashboard-config
-        - name: app-content
-          configMap:
-            name: homelab-dashboard-html
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
 ---
 apiVersion: v1
 kind: Service
@@ -315,5 +435,5 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 80
+      targetPort: 8080
       protocol: TCP

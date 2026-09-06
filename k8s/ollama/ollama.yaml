@@ -15,6 +15,7 @@ spec:
       labels:
         app: ollama
     spec:
+      runtimeClassName: ${OLLAMA_RUNTIME_CLASS}
       containers:
         - name: ollama
           image: ${OLLAMA_IMAGE}
@@ -22,6 +23,17 @@ spec:
           ports:
             - containerPort: 11434
               name: http
+          env:
+            - name: OLLAMA_HOST
+              value: 0.0.0.0
+            - name: OLLAMA_NUM_GPU
+              value: "${OLLAMA_NUM_GPU}"
+            - name: OLLAMA_BACKEND_MODE
+              value: "${OLLAMA_BACKEND_MODE}"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "${OLLAMA_NVIDIA_VISIBLE_DEVICES}"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "${OLLAMA_NVIDIA_DRIVER_CAPABILITIES}"
           volumeMounts:
             - name: ollama-storage
               mountPath: /root/.ollama
@@ -29,9 +41,11 @@ spec:
             requests:
               cpu: 500m
               memory: 1Gi
+              ${OLLAMA_GPU_REQUEST_KEY}
             limits:
               cpu: 4
               memory: 8Gi
+              ${OLLAMA_GPU_LIMIT_KEY}
       volumes:
         - name: ollama-storage
           persistentVolumeClaim:
@@ -47,7 +61,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 20Gi
+      storage: 50Gi
 ---
 apiVersion: v1
 kind: Service

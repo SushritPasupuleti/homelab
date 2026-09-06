@@ -57,11 +57,12 @@ metadata:
   labels:
     app: portainer
 spec:
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: portainer
   ports:
     - name: http
       port: 9000
       targetPort: 9000
+      nodePort: 30900
       protocol: TCP

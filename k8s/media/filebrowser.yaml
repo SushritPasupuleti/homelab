@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filebrowser
+  namespace: homelab
+  labels:
+    app: filebrowser
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: filebrowser
+  template:
+    metadata:
+      labels:
+        app: filebrowser
+    spec:
+      containers:
+        - name: filebrowser
+          image: ${FILEBROWSER_IMAGE}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: FILEBROWSER_USERNAME
+              value: "${FILEBROWSER_USERNAME}"
+            - name: FILEBROWSER_PASSWORD
+              value: "${FILEBROWSER_PASSWORD}"
+          args:
+            - --database
+            - /data/filebrowser.db
+            - --root
+            - /data
+            - --port
+            - "80"
+            - --address
+            - "0.0.0.0"
+            - --username
+            - "${FILEBROWSER_USERNAME}"
+            - --password
+            - "${FILEBROWSER_PASSWORD}"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          volumeMounts:
+            - name: filebrowser-data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: filebrowser-data
+          hostPath:
+            path: /mnt/wdex4100
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: filebrowser
+  namespace: homelab
+  labels:
+    app: filebrowser
+spec:
+  type: ClusterIP
+  selector:
+    app: filebrowser
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP

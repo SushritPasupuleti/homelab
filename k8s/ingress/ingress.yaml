@@ -5,8 +5,13 @@ metadata:
   namespace: homelab
 spec:
   ingressClassName: nginx
+  defaultBackend:
+    service:
+      name: homelab-dashboard
+      port:
+        number: 80
   rules:
-    - host: stock-ez.homelab.local
+    - host: stock-ez.homelab.home.arpa
       http:
         paths:
           - path: /
@@ -16,7 +21,7 @@ spec:
                 name: stock-ez
                 port:
                   number: 80
-    - host: dashboard.homelab.local
+    - host: dashboard.homelab.home.arpa
       http:
         paths:
           - path: /
@@ -26,7 +31,27 @@ spec:
                 name: homelab-dashboard
                 port:
                   number: 80
-    - host: portainer.homelab.local
+    - host: open-webui.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: open-webui
+                port:
+                  number: 80
+    - host: ollama.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ollama
+                port:
+                  number: 11434
+    - host: portainer.homelab.home.arpa
       http:
         paths:
           - path: /
@@ -36,7 +61,47 @@ spec:
                 name: portainer
                 port:
                   number: 9000
-    - host: homeassistant.homelab.local
+    - host: grafana.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+    - host: prometheus.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090
+    - host: torrent.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: qbittorrent
+                port:
+                  number: 8080
+    - host: files.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: filebrowser
+                port:
+                  number: 80
+    - host: homeassistant.homelab.home.arpa
       http:
         paths:
           - path: /
@@ -46,7 +111,7 @@ spec:
                 name: home-assistant
                 port:
                   number: 8123
-    - host: media.homelab.local
+    - host: media.homelab.home.arpa
       http:
         paths:
           - path: /
@@ -56,7 +121,7 @@ spec:
                 name: jellyfin
                 port:
                   number: 8096
-    - host: plex.homelab.local
+    - host: plex.homelab.home.arpa
       http:
         paths:
           - path: /
