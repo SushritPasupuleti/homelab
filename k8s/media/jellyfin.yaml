@@ -28,8 +28,12 @@ spec:
             - name: JELLYFIN_PublishedServerUrl
               value: "http://media.homelab.home.arpa"
           volumeMounts:
-            - name: media
-              mountPath: /media
+            - name: media-general
+              mountPath: /media/General
+            - name: media-extension2
+              mountPath: /media/Extension2
+            - name: media-general2
+              mountPath: /media/General2
             - name: config
               mountPath: /config
             - name: cache
@@ -42,9 +46,17 @@ spec:
               cpu: 2
               memory: 2Gi
       volumes:
-        - name: media
+        - name: media-general
           hostPath:
-            path: /mnt/wdex4100/media
+            path: /mnt/wdex4100/General/Media
+            type: DirectoryOrCreate
+        - name: media-extension2
+          hostPath:
+            path: /mnt/wdex4100/Extension2/Media
+            type: DirectoryOrCreate
+        - name: media-general2
+          hostPath:
+            path: /mnt/wdex4100/General2/Media
             type: DirectoryOrCreate
         - name: config
           persistentVolumeClaim:

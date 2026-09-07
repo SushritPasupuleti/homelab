@@ -13,16 +13,10 @@ data:
       trusted_proxies:
         - 10.0.0.0/8
         - 10.42.0.0/16
-        - 10.42.0.40
-        - 10.42.0.62
-        - 10.42.0.64
-        - 10.43.0.0/16
         - 172.16.0.0/12
         - 192.168.0.0/16
         - 127.0.0.1
         - ::1
-      ip_ban_enabled: true
-      login_attempts_threshold: 5
 
     homeassistant:
       internal_url: http://homeassistant.homelab.home.arpa
@@ -81,6 +75,15 @@ spec:
           volumeMounts:
             - name: ha-config
               mountPath: /config
+            - name: wdex4100-general
+              mountPath: /media/wdex4100/General
+              readOnly: true
+            - name: wdex4100-extension2
+              mountPath: /media/wdex4100/Extension2
+              readOnly: true
+            - name: wdex4100-general2
+              mountPath: /media/wdex4100/General2
+              readOnly: true
           readinessProbe:
             httpGet:
               path: /
@@ -107,6 +110,18 @@ spec:
         - name: ha-config-file
           configMap:
             name: home-assistant-config-file
+        - name: wdex4100-general
+          hostPath:
+            path: /mnt/wdex4100/General/Media
+            type: DirectoryOrCreate
+        - name: wdex4100-extension2
+          hostPath:
+            path: /mnt/wdex4100/Extension2/Media
+            type: DirectoryOrCreate
+        - name: wdex4100-general2
+          hostPath:
+            path: /mnt/wdex4100/General2/Media
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
