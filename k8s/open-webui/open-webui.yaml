@@ -23,8 +23,20 @@ spec:
             - containerPort: 8080
               name: http
           env:
+            - name: WEBUI_URL
+              value: "http://open-webui.homelab.home.arpa"
             - name: OLLAMA_BASE_URL
               value: "http://ollama.homelab.svc.cluster.local:11434"
+            - name: ENABLE_WEB_SEARCH
+              value: "True"
+            - name: WEB_SEARCH_ENGINE
+              value: "openserp"
+            - name: WEB_SEARCH_RESULT_COUNT
+              value: "5"
+            - name: OPENSERP_BASE_URL
+              value: "http://openserp.homelab.svc.cluster.local:7000"
+            - name: OPENSERP_API_BASE_URL
+              value: "http://openserp.homelab.svc.cluster.local:7000"
             - name: WEBUI_AUTH
               value: "False"
           volumeMounts:

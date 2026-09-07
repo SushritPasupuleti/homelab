@@ -1,3 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: home-assistant-config-file
+  namespace: homelab
+data:
+  configuration.yaml: |
+    # Loads default set of integrations. Do not remove.
+    default_config:
+
+    http:
+      use_x_forwarded_for: true
+      trusted_proxies:
+        - 10.0.0.0/8
+        - 10.42.0.0/16
+        - 10.42.0.40
+        - 10.42.0.62
+        - 10.42.0.64
+        - 10.43.0.0/16
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+        - 127.0.0.1
+        - ::1
+      ip_ban_enabled: true
+      login_attempts_threshold: 5
+
+    homeassistant:
+      internal_url: http://homeassistant.homelab.home.arpa
+      external_url: http://homeassistant.homelab.home.arpa
+
+    # Load frontend themes from the themes folder
+    frontend:
+      themes: !include_dir_merge_named themes
+
+    automation: !include automations.yaml
+    script: !include scripts.yaml
+    scene: !include scenes.yaml
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,6 +45,8 @@ metadata:
     app: home-assistant
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: home-assistant
@@ -15,6 +55,22 @@ spec:
       labels:
         app: home-assistant
     spec:
+      initContainers:
+        - name: init-home-assistant-config
+          image: ${HOME_ASSISTANT_IMAGE}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /config
+              cp -f /tmp/config/configuration.yaml /config/configuration.yaml
+              chmod 0644 /config/configuration.yaml
+          volumeMounts:
+            - name: ha-config
+              mountPath: /config
+            - name: ha-config-file
+              mountPath: /tmp/config
       containers:
         - name: home-assistant
           image: ${HOME_ASSISTANT_IMAGE}
@@ -48,6 +104,9 @@ spec:
         - name: ha-config
           persistentVolumeClaim:
             claimName: home-assistant-config
+        - name: ha-config-file
+          configMap:
+            name: home-assistant-config-file
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

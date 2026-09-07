@@ -22,6 +22,7 @@ DASHBOARD_IMAGE="${DASHBOARD_IMAGE:-glanceapp/glance:latest}"
 PORTAINER_IMAGE="${PORTAINER_IMAGE:-portainer/portainer-ce:latest}"
 HOME_ASSISTANT_IMAGE="${HOME_ASSISTANT_IMAGE:-ghcr.io/home-assistant/home-assistant:stable}"
 OPEN_WEBUI_IMAGE="${OPEN_WEBUI_IMAGE:-ghcr.io/open-webui/open-webui:main}"
+OPENSERP_IMAGE="${OPENSERP_IMAGE:-karust/openserp:latest}"
 PROMETHEUS_IMAGE="${PROMETHEUS_IMAGE:-prom/prometheus:v2.53.2}"
 GRAFANA_IMAGE="${GRAFANA_IMAGE:-grafana/grafana:11.1.5}"
 GRAFANA_ADMIN_USER="${GRAFANA_ADMIN_USER:-admin}"
@@ -40,6 +41,7 @@ DASHBOARD_HOST="${DASHBOARD_HOST:-dashboard.homelab.home.arpa}"
 PORTAINER_HOST="${PORTAINER_HOST:-portainer.homelab.home.arpa}"
 HOMEASSISTANT_HOST="${HOMEASSISTANT_HOST:-homeassistant.homelab.home.arpa}"
 OPEN_WEBUI_HOST="${OPEN_WEBUI_HOST:-open-webui.homelab.home.arpa}"
+OPENSERP_HOST="${OPENSERP_HOST:-openserp.homelab.home.arpa}"
 GRAFANA_HOST="${GRAFANA_HOST:-grafana.homelab.home.arpa}"
 PROMETHEUS_HOST="${PROMETHEUS_HOST:-prometheus.homelab.home.arpa}"
 QBITTORRENT_HOST="${QBITTORRENT_HOST:-torrent.homelab.home.arpa}"
@@ -49,13 +51,39 @@ PLEX_HOST="${PLEX_HOST:-plex.homelab.home.arpa}"
 DOMAIN="${DOMAIN:-homelab.home.arpa}"
 METALLB_ENABLED="${METALLB_ENABLED:-true}"
 METALLB_IP_POOL="${METALLB_IP_POOL:-192.168.1.200-192.168.1.249}"
-HOMEPAGE_ALLOWED_HOSTS="${HOMEPAGE_ALLOWED_HOSTS:-dashboard.homelab.home.arpa,stock-ez.homelab.home.arpa,portainer.homelab.home.arpa,homeassistant.homelab.home.arpa,open-webui.homelab.home.arpa,grafana.homelab.home.arpa,prometheus.homelab.home.arpa,torrent.homelab.home.arpa,files.homelab.home.arpa,ollama.homelab.home.arpa,media.homelab.home.arpa,plex.homelab.home.arpa,localhost,127.0.0.1,192.168.1.201,192.168.1.202,192.168.1.203,192.168.1.205,192.168.1.207,192.168.1.208,192.168.1.209,192.168.1.210,192.168.1.213,192.168.1.214,192.168.1.6,::1}"
+HOMEPAGE_ALLOWED_HOSTS="${HOMEPAGE_ALLOWED_HOSTS:-dashboard.homelab.home.arpa,stock-ez.homelab.home.arpa,portainer.homelab.home.arpa,homeassistant.homelab.home.arpa,open-webui.homelab.home.arpa,openserp.homelab.home.arpa,grafana.homelab.home.arpa,prometheus.homelab.home.arpa,torrent.homelab.home.arpa,files.homelab.home.arpa,ollama.homelab.home.arpa,media.homelab.home.arpa,plex.homelab.home.arpa,localhost,127.0.0.1,192.168.1.201,192.168.1.202,192.168.1.203,192.168.1.205,192.168.1.207,192.168.1.208,192.168.1.209,192.168.1.210,192.168.1.213,192.168.1.214,192.168.1.6,::1}"
 HOMELAB_SECRET_FILE="${HOMELAB_SECRET_FILE:-$ROOT_DIR/.homelab-secrets.env}"
 GPU_DETECTED="$(if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then echo true; elif [ -e /dev/nvidiactl ] || ls /dev/nvidia* >/dev/null 2>&1 2>/dev/null; then echo true; else echo false; fi)"
-NODE_GPU_ALLOCATABLE=""
+NODE_GPU_ALLOCATABLE="0"
 if kubectl get nodes -o jsonpath='{range .items[*]}{.status.allocatable.nvidia\.com/gpu}{"\n"}{end}' >/dev/null 2>&1; then
-  NODE_GPU_ALLOCATABLE="$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.allocatable.nvidia\.com/gpu}{"\n"}{end}' 2>/dev/null | awk 'BEGIN {found=0} $1 ~ /^[0-9]+$/ && $1 > 0 {print $1; found=1} END {if (!found) exit 0}' || true)"
+  NODE_GPU_ALLOCATABLE="$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.allocatable.nvidia\.com/gpu}{"\n"}{end}' 2>/dev/null | awk 'NF {print $1; exit}' || echo 0)"
 fi
+if [ -z "${NODE_GPU_ALLOCATABLE}" ]; then
+  NODE_GPU_ALLOCATABLE="0"
+fi
+NVIDIA_ENABLE_REASON="Node GPU capacity is not yet available to Kubernetes."
+KUBE_CONTAINER_RUNTIME="unknown"
+if kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.containerRuntimeVersion}' >/dev/null 2>&1; then
+  KUBE_CONTAINER_RUNTIME="$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.containerRuntimeVersion}' 2>/dev/null || true)"
+fi
+case "${KUBE_CONTAINER_RUNTIME}" in
+  *docker*|*cri-dockerd*) KUBE_CONTAINER_RUNTIME="docker" ;;
+  *containerd*) KUBE_CONTAINER_RUNTIME="containerd" ;;
+  *cri-o*) KUBE_CONTAINER_RUNTIME="cri-o" ;;
+  *) KUBE_CONTAINER_RUNTIME="unknown" ;;
+esac
+
+DOCKER_NVIDIA_RUNTIME_AVAILABLE="false"
+CONTAINERD_NVIDIA_RUNTIME_AVAILABLE="false"
+if command -v docker >/dev/null 2>&1; then
+  if docker info --format '{{json .Runtimes}}' 2>/dev/null | grep -Eq 'nvidia|nvidia-cdi'; then
+    DOCKER_NVIDIA_RUNTIME_AVAILABLE="true"
+  fi
+fi
+if command -v nvidia-container-runtime >/dev/null 2>&1 || [ -x /usr/bin/nvidia-container-runtime ]; then
+  CONTAINERD_NVIDIA_RUNTIME_AVAILABLE="true"
+fi
+
 OLLAMA_USE_NVIDIA="${OLLAMA_USE_NVIDIA:-$GPU_DETECTED}"
 OLLAMA_GPU_COUNT="${OLLAMA_GPU_COUNT:-1}"
 OLLAMA_BACKEND_MODE="cpu"
@@ -66,8 +94,27 @@ if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ "${GPU_DETECTED}" != "true" ]; then
   OLLAMA_USE_NVIDIA="false"
 fi
 
-if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ -z "${NODE_GPU_ALLOCATABLE}" ]; then
-  echo "Kubernetes node reports no allocatable nvidia.com/gpu; forcing Ollama to CPU mode."
+if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ "${NODE_GPU_ALLOCATABLE:-0}" = "0" ]; then
+  echo "Kubernetes is not advertising any allocatable nvidia.com/gpu on the node; host GPU is present, but the cluster is not exposing GPU capacity to pods. Ollama remains in CPU mode until nvidia.com/gpu is available."
+  NVIDIA_ENABLE_REASON="Kubernetes is not advertising any allocatable nvidia.com/gpu on the node."
+  OLLAMA_USE_NVIDIA="false"
+fi
+
+if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ "${KUBE_CONTAINER_RUNTIME}" = "docker" ] && [ "${DOCKER_NVIDIA_RUNTIME_AVAILABLE}" != "true" ]; then
+  echo "Docker is the node runtime, but the NVIDIA Container Toolkit is not configured for Docker; forcing Ollama to CPU mode."
+  NVIDIA_ENABLE_REASON="Docker is configured as the node runtime, but the NVIDIA Docker runtime is not available."
+  OLLAMA_USE_NVIDIA="false"
+fi
+
+if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ "${KUBE_CONTAINER_RUNTIME}" = "containerd" ] && [ "${CONTAINERD_NVIDIA_RUNTIME_AVAILABLE}" != "true" ]; then
+  echo "containerd is the node runtime, but the NVIDIA runtime is not configured; forcing Ollama to CPU mode."
+  NVIDIA_ENABLE_REASON="containerd is configured as the node runtime, but the NVIDIA runtime is not available."
+  OLLAMA_USE_NVIDIA="false"
+fi
+
+if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ "${KUBE_CONTAINER_RUNTIME}" = "containerd" ] && ! kubectl get runtimeclass nvidia >/dev/null 2>&1; then
+  echo "The nvidia RuntimeClass is missing for the containerd node runtime; forcing Ollama to CPU mode."
+  NVIDIA_ENABLE_REASON="The required nvidia RuntimeClass is missing for the containerd runtime."
   OLLAMA_USE_NVIDIA="false"
 fi
 
@@ -81,7 +128,11 @@ else
 fi
 
 if [ "${OLLAMA_USE_NVIDIA}" = "true" ]; then
-  OLLAMA_RUNTIME_CLASS="nvidia"
+  if [ "${KUBE_CONTAINER_RUNTIME}" = "containerd" ]; then
+    OLLAMA_RUNTIME_CLASS="nvidia"
+  else
+    OLLAMA_RUNTIME_CLASS=""
+  fi
   OLLAMA_NVIDIA_VISIBLE_DEVICES="all"
   OLLAMA_NVIDIA_DRIVER_CAPABILITIES="compute,utility"
   OLLAMA_GPU_COUNT="${OLLAMA_GPU_COUNT:-1}"
@@ -100,7 +151,7 @@ else
   OLLAMA_BACKEND_MODE="cpu"
 fi
 
-export NAMESPACE STOCK_EZ_IMAGE OLLAMA_IMAGE DASHBOARD_IMAGE PORTAINER_IMAGE HOME_ASSISTANT_IMAGE OPEN_WEBUI_IMAGE PROMETHEUS_IMAGE GRAFANA_IMAGE GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD QBITTORRENT_IMAGE FILEBROWSER_IMAGE PORTAINER_ADMIN_USER PORTAINER_ADMIN_PASSWORD QBITTORRENT_USERNAME QBITTORRENT_PASSWORD FILEBROWSER_USERNAME FILEBROWSER_PASSWORD STOCK_EZ_HOST DASHBOARD_HOST PORTAINER_HOST HOMEASSISTANT_HOST OPEN_WEBUI_HOST GRAFANA_HOST PROMETHEUS_HOST QBITTORRENT_HOST FILEBROWSER_HOST JELLYFIN_HOST PLEX_HOST DOMAIN METALLB_ENABLED METALLB_IP_POOL HOMEPAGE_ALLOWED_HOSTS HOMELAB_SECRET_FILE OLLAMA_USE_NVIDIA OLLAMA_GPU_COUNT OLLAMA_NUM_GPU OLLAMA_BACKEND_MODE OLLAMA_RUNTIME_CLASS OLLAMA_NVIDIA_VISIBLE_DEVICES OLLAMA_NVIDIA_DRIVER_CAPABILITIES OLLAMA_GPU_REQUEST_KEY OLLAMA_GPU_LIMIT_KEY DCGM_EXPORTER_SCRAPE
+export NAMESPACE STOCK_EZ_IMAGE OLLAMA_IMAGE DASHBOARD_IMAGE PORTAINER_IMAGE HOME_ASSISTANT_IMAGE OPEN_WEBUI_IMAGE OPENSERP_IMAGE PROMETHEUS_IMAGE GRAFANA_IMAGE GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD QBITTORRENT_IMAGE FILEBROWSER_IMAGE PORTAINER_ADMIN_USER PORTAINER_ADMIN_PASSWORD QBITTORRENT_USERNAME QBITTORRENT_PASSWORD FILEBROWSER_USERNAME FILEBROWSER_PASSWORD STOCK_EZ_HOST DASHBOARD_HOST PORTAINER_HOST HOMEASSISTANT_HOST OPEN_WEBUI_HOST OPENSERP_HOST GRAFANA_HOST PROMETHEUS_HOST QBITTORRENT_HOST FILEBROWSER_HOST JELLYFIN_HOST PLEX_HOST DOMAIN METALLB_ENABLED METALLB_IP_POOL HOMEPAGE_ALLOWED_HOSTS HOMELAB_SECRET_FILE OLLAMA_USE_NVIDIA OLLAMA_GPU_COUNT OLLAMA_NUM_GPU OLLAMA_BACKEND_MODE OLLAMA_RUNTIME_CLASS OLLAMA_NVIDIA_VISIBLE_DEVICES OLLAMA_NVIDIA_DRIVER_CAPABILITIES OLLAMA_GPU_REQUEST_KEY OLLAMA_GPU_LIMIT_KEY DCGM_EXPORTER_SCRAPE KUBE_CONTAINER_RUNTIME DOCKER_NVIDIA_RUNTIME_AVAILABLE CONTAINERD_NVIDIA_RUNTIME_AVAILABLE
 
 write_homelab_secrets() {
   mkdir -p "$(dirname "$HOMELAB_SECRET_FILE")"
@@ -128,6 +179,8 @@ log_homelab_credentials() {
   echo "  Username: $GRAFANA_ADMIN_USER"
   echo "  Password: $GRAFANA_ADMIN_PASSWORD"
   echo "Prometheus: http://$PROMETHEUS_HOST"
+  echo "OpenSERP: http://$OPENSERP_HOST"
+  echo "  API docs: http://$OPENSERP_HOST/docs"
   echo "qBittorrent: http://$QBITTORRENT_HOST or http://<node-ip>:8080"
   echo "  Username: $QBITTORRENT_USERNAME"
   echo "  Password: $QBITTORRENT_PASSWORD"
@@ -191,24 +244,83 @@ reload_runtime_config() {
   kubectl rollout status -n "$NAMESPACE" deployment/homelab-dashboard --timeout=180s || true
 }
 
+report_nvidia_runtime_status() {
+  local runtime_class_state="missing"
+  if kubectl get runtimeclass nvidia >/dev/null 2>&1; then
+    runtime_class_state="present"
+  fi
+
+  echo
+  echo "=== NVIDIA runtime status ==="
+  echo "Host GPU detected: ${GPU_DETECTED}"
+  echo "Kubernetes allocatable nvidia.com/gpu: ${NODE_GPU_ALLOCATABLE:-0}"
+  echo "Detected container runtime: ${KUBE_CONTAINER_RUNTIME}"
+  echo "Docker NVIDIA runtime configured: ${DOCKER_NVIDIA_RUNTIME_AVAILABLE}"
+  echo "containerd NVIDIA runtime configured: ${CONTAINERD_NVIDIA_RUNTIME_AVAILABLE}"
+  echo "RuntimeClass 'nvidia': ${runtime_class_state}"
+  echo "Ollama GPU mode enabled: ${OLLAMA_USE_NVIDIA}"
+  if [ "${OLLAMA_USE_NVIDIA}" = "false" ]; then
+    echo "Reason: ${NVIDIA_ENABLE_REASON}"
+  fi
+
+  case "${KUBE_CONTAINER_RUNTIME}" in
+    docker)
+      if [ "${DOCKER_NVIDIA_RUNTIME_AVAILABLE}" = "true" ]; then
+        echo "Docker runtime config: valid for NVIDIA, but still not enough if Kubernetes is not advertising nvidia.com/gpu."
+      else
+        echo "Docker runtime config: invalid for NVIDIA. Run: sudo nvidia-ctk runtime configure --runtime=docker --set-as-default && sudo systemctl restart docker"
+      fi
+      ;;
+    containerd)
+      if [ "${CONTAINERD_NVIDIA_RUNTIME_AVAILABLE}" = "true" ]; then
+        echo "containerd runtime config: valid for NVIDIA, but Kubernetes still needs allocatable GPU capacity and the 'nvidia' RuntimeClass."
+      else
+        echo "containerd runtime config: invalid for NVIDIA. Run: sudo env PATH=\"/run/current-system/sw/bin:$PATH\" nvidia-ctk runtime configure --runtime=containerd --set-as-default && sudo systemctl restart containerd && sudo systemctl restart k3s"
+      fi
+      if [ "${runtime_class_state}" = "present" ]; then
+        echo "RuntimeClass config: valid. 'nvidia' RuntimeClass is available for Kubernetes pods."
+      else
+        echo "RuntimeClass config: missing. Create or restore the 'nvidia' RuntimeClass before enabling GPU workloads."
+      fi
+      ;;
+    *)
+      echo "Runtime config: unknown. NVIDIA GPU workloads will remain disabled until the node runtime is confirmed and configured."
+      ;;
+  esac
+  echo "============================="
+  echo
+}
+
 if [ "${OLLAMA_USE_NVIDIA}" = "true" ]; then
-  echo "NVIDIA GPU detected on the host; enabling GPU access for Ollama."
-  if ! command -v nvidia-container-runtime >/dev/null 2>&1 && [ ! -x /usr/bin/nvidia-container-runtime ]; then
-    echo "WARNING: NVIDIA GPU is present, but the containerd runtime is not configured for Kubernetes."
-    echo "         Run the host-side fix from docs/nvidia-gpu-troubleshooting.md before expecting GPU metrics or Ollama GPU mode to work."
-    echo "         Required commands:"
-    echo "           sudo env PATH=\"/run/current-system/sw/bin:$PATH\" nvidia-ctk runtime configure --runtime=containerd --set-as-default"
-    echo "           sudo systemctl restart containerd && sudo systemctl restart k3s"
-  fi
+  echo "NVIDIA GPU detected and the node runtime is ${KUBE_CONTAINER_RUNTIME}; enabling GPU access for Ollama."
 
-  if ! kubectl get runtimeclass nvidia >/dev/null 2>&1; then
-    kubectl create runtimeclass nvidia --handler=nvidia --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-  fi
+  if [ "${KUBE_CONTAINER_RUNTIME}" = "containerd" ]; then
+    if ! command -v nvidia-container-runtime >/dev/null 2>&1 && [ ! -x /usr/bin/nvidia-container-runtime ]; then
+      echo "WARNING: NVIDIA GPU is present, but the containerd runtime is not configured for Kubernetes."
+      echo "         Run the host-side fix from docs/nvidia-gpu-troubleshooting.md before expecting GPU metrics or Ollama GPU mode to work."
+      echo "         Required commands:"
+      echo "           sudo env PATH=\"/run/current-system/sw/bin:$PATH\" nvidia-ctk runtime configure --runtime=containerd --set-as-default"
+      echo "           sudo systemctl restart containerd && sudo systemctl restart k3s"
+    fi
 
-  if ! kubectl get daemonset -n kube-system nvidia-device-plugin-daemonset >/dev/null 2>&1; then
-    kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.2/nvidia-device-plugin.yml >/dev/null
+    if ! kubectl get runtimeclass nvidia >/dev/null 2>&1; then
+      kubectl create runtimeclass nvidia --handler=nvidia --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+    fi
+
+    if ! kubectl get daemonset -n kube-system nvidia-device-plugin-daemonset >/dev/null 2>&1; then
+      kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.2/nvidia-device-plugin.yml >/dev/null
+    fi
+  elif [ "${KUBE_CONTAINER_RUNTIME}" = "docker" ]; then
+    echo "Docker runtime detected. Ensure the NVIDIA Container Toolkit is configured for Docker and that the node advertises nvidia.com/gpu."
+    if command -v docker >/dev/null 2>&1 && ! docker info --format '{{json .Runtimes}}' 2>/dev/null | grep -Eq 'nvidia|nvidia-cdi'; then
+      echo "WARNING: Docker is not configured to use the NVIDIA runtime. Re-run the host-side Docker setup before redeploying Ollama in GPU mode."
+    fi
+  else
+    echo "WARNING: Unknown container runtime (${KUBE_CONTAINER_RUNTIME}); waiting for a valid NVIDIA runtime before enabling GPU mode."
   fi
 fi
+
+report_nvidia_runtime_status
 
 kubectl apply -f "$ROOT_DIR/k8s/namespace.yaml"
 
@@ -229,6 +341,7 @@ render_and_apply "$ROOT_DIR/k8s/stock-ez/configmap.yaml"
 render_and_apply "$ROOT_DIR/k8s/stock-ez/deployment.yaml"
 render_and_apply "$ROOT_DIR/k8s/ollama/ollama.yaml"
 render_and_apply "$ROOT_DIR/k8s/open-webui/open-webui.yaml"
+render_and_apply "$ROOT_DIR/k8s/openserp/openserp.yaml"
 render_and_apply "$ROOT_DIR/k8s/home-assistant/home-assistant.yaml"
 render_and_apply "$ROOT_DIR/k8s/dashboard/configmap.yaml"
 render_and_apply "$ROOT_DIR/k8s/dashboard/dashboard.yaml"
@@ -248,6 +361,7 @@ render_and_apply "$ROOT_DIR/k8s/portainer/portainer.yaml"
 kubectl rollout status -n "$NAMESPACE" deployment/stock-ez --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/ollama --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/open-webui --timeout=180s || true
+kubectl rollout status -n "$NAMESPACE" deployment/openserp --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/home-assistant --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/jellyfin --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/minidlna --timeout=180s || true
@@ -267,6 +381,8 @@ echo "Deployment complete. Accessible URLs will be similar to:"
 echo "  http://$STOCK_EZ_HOST"
 echo "  http://$DASHBOARD_HOST"
 echo "  http://$OPEN_WEBUI_HOST"
+echo "  http://$OPENSERP_HOST"
+echo "  http://$OPENSERP_HOST/docs"
 echo "  http://$PORTAINER_HOST"
 echo "  http://$HOMEASSISTANT_HOST"
 echo "  http://$QBITTORRENT_HOST"

@@ -48,29 +48,29 @@ data:
                 cache: 30s
                 sites:
                   - title: Dashboard
-                    url: http://homelab-dashboard
+                    url: http://dashboard.homelab.home.arpa
                   - title: Stock-EZ
-                    url: http://stock-ez
+                    url: http://stock-ez.homelab.home.arpa
                   - title: Portainer
-                    url: http://portainer:9000
+                    url: http://portainer.homelab.home.arpa
                   - title: Grafana
-                    url: http://grafana:3000
+                    url: http://grafana.homelab.home.arpa
                   - title: Prometheus
-                    url: http://prometheus:9090
+                    url: http://prometheus.homelab.home.arpa
                   - title: Ollama
-                    url: http://ollama:11434
+                    url: http://ollama.homelab.home.arpa
                   - title: Open WebUI
-                    url: http://open-webui
+                    url: http://open-webui.homelab.home.arpa
                   - title: Home Assistant
-                    url: http://home-assistant:8123
+                    url: http://homeassistant.homelab.home.arpa
                   - title: Jellyfin
-                    url: http://jellyfin:8096
+                    url: http://media.homelab.home.arpa
                   - title: Plex
-                    url: http://plex:32400
+                    url: http://plex.homelab.home.arpa
                   - title: qBittorrent
-                    url: http://qbittorrent:8080
+                    url: http://torrent.homelab.home.arpa
                   - title: File Browser
-                    url: http://filebrowser
+                    url: http://files.homelab.home.arpa
 
               - type: monitor
                 title: Service uptime + response
@@ -78,21 +78,23 @@ data:
                 cache: 60s
                 sites:
                   - title: Dashboard
-                    url: http://homelab-dashboard
+                    url: http://dashboard.homelab.home.arpa
                   - title: Stock-EZ
-                    url: http://stock-ez
+                    url: http://stock-ez.homelab.home.arpa
                   - title: Portainer
-                    url: http://portainer:9000
+                    url: http://portainer.homelab.home.arpa
                   - title: Grafana
-                    url: http://grafana:3000
+                    url: http://grafana.homelab.home.arpa
                   - title: Prometheus
-                    url: http://prometheus:9090
+                    url: http://prometheus.homelab.home.arpa
                   - title: Open WebUI
-                    url: http://open-webui
+                    url: http://open-webui.homelab.home.arpa
+                  - title: OpenSERP
+                    url: http://openserp.homelab.home.arpa/docs
                   - title: Home Assistant
-                    url: http://home-assistant:8123
+                    url: http://homeassistant.homelab.home.arpa
                   - title: Ollama API
-                    url: http://ollama:11434/api/version
+                    url: http://ollama.homelab.home.arpa:11434/api/version
 
               - type: bookmarks
                 title: Core services
@@ -115,6 +117,8 @@ data:
                         url: http://homeassistant.homelab.home.arpa
                       - title: Open WebUI
                         url: http://open-webui.homelab.home.arpa
+                      - title: OpenSERP
+                        url: http://openserp.homelab.home.arpa/docs
                       - title: Ollama
                         url: http://ollama.homelab.home.arpa:11434
 
@@ -186,17 +190,19 @@ data:
                 cache: 30s
                 sites:
                   - title: Home Assistant
-                    url: http://home-assistant:8123
+                    url: http://homeassistant.homelab.home.arpa
                   - title: Open WebUI
-                    url: http://open-webui
+                    url: http://open-webui.homelab.home.arpa
+                  - title: OpenSERP
+                    url: http://openserp.homelab.home.arpa/docs
                   - title: Jellyfin
-                    url: http://jellyfin:8096
+                    url: http://media.homelab.home.arpa
                   - title: Plex
-                    url: http://plex:32400
+                    url: http://plex.homelab.home.arpa
                   - title: qBittorrent
-                    url: http://qbittorrent:8080
+                    url: http://torrent.homelab.home.arpa
                   - title: File Browser
-                    url: http://filebrowser
+                    url: http://files.homelab.home.arpa
 
               - type: bookmarks
                 title: Media and downloads
@@ -238,13 +244,13 @@ data:
                 cache: 30s
                 sites:
                   - title: Grafana
-                    url: http://grafana:3000
+                    url: http://grafana.homelab.home.arpa
                   - title: Prometheus
-                    url: http://prometheus:9090
+                    url: http://prometheus.homelab.home.arpa
                   - title: Portainer
-                    url: http://portainer:9000
+                    url: http://portainer.homelab.home.arpa
                   - title: Open WebUI
-                    url: http://open-webui
+                    url: http://open-webui.homelab.home.arpa
 
               - type: bookmarks
                 title: Monitoring quick links
@@ -255,6 +261,8 @@ data:
                         url: http://grafana.homelab.home.arpa
                       - title: Prometheus
                         url: http://prometheus.homelab.home.arpa
+                      - title: OpenSERP
+                        url: http://openserp.homelab.home.arpa/docs
                       - title: Dashboard
                         url: http://dashboard.homelab.home.arpa
 
@@ -318,6 +326,381 @@ data:
                     show-thumbnails: true
                     limit: 8
 
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Tech
+                    subreddit: tech
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Tech News
+                    subreddit: technews
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: AZURE
+                    subreddit: AZURE
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Agents of AI
+                    subreddit: AgentsOfAI
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: AI
+                    subreddit: ArtificialInteligence
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: BI
+                    subreddit: BusinessIntelligence
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Frontend
+                    subreddit: Frontend
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Local AI Servers
+                    subreddit: LocalAIServers
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Local LLM
+                    subreddit: LocalLLM
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Local LLaMA
+                    subreddit: LocalLLaMA
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Machine Learning
+                    subreddit: MachineLearning
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Product Management
+                    subreddit: ProductManagement
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Programming Languages
+                    subreddit: ProgrammingLanguages
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Python
+                    subreddit: Python
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: SQL
+                    subreddit: SQL
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Software Engineering
+                    subreddit: SoftwareEngineering
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Agile
+                    subreddit: agile
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Ansible
+                    subreddit: ansible
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Arch Linux
+                    subreddit: archlinux
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: AWS
+                    subreddit: aws
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Consulting
+                    subreddit: consulting
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Data Engineering
+                    subreddit: dataengineering
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Data Science
+                    subreddit: datascience
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Datasets
+                    subreddit: datasets
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Developers India
+                    subreddit: developersIndia
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: DevOps
+                    subreddit: devops
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Docker
+                    subreddit: docker
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: .NET
+                    subreddit: dotnet
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Emacs
+                    subreddit: emacs
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Gadgets
+                    subreddit: gadgets
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: GitHub
+                    subreddit: github
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Go
+                    subreddit: golang
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Homelab
+                    subreddit: homelab
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Homelab India
+                    subreddit: homelabindia
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Kubernetes
+                    subreddit: kubernetes
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Linux
+                    subreddit: linux
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Neovim
+                    subreddit: neovim
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Node.js
+                    subreddit: node
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Programming
+                    subreddit: programming
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: React
+                    subreddit: reactjs
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: React Native
+                    subreddit: reactnative
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Rust
+                    subreddit: rust
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Rust Gamedev
+                    subreddit: rust_gamedev
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Software
+                    subreddit: software
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Software Development
+                    subreddit: softwaredevelopment
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: TypeScript
+                    subreddit: typescript
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Technology
+                    subreddit: technology
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Vim
+                    subreddit: vim
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
+              - type: split-column
+                widgets:
+                  - type: reddit
+                    title: Web Design
+                    subreddit: web_design
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+                  - type: reddit
+                    title: Web Dev
+                    subreddit: webdev
+                    style: vertical-list
+                    show-thumbnails: true
+                    limit: 8
+
       - name: Ollama
         columns:
           - size: small
@@ -367,11 +750,11 @@ data:
                 cache: 30s
                 sites:
                   - title: Ollama API
-                    url: http://ollama:11434
+                    url: http://ollama.homelab.home.arpa:11434
                   - title: Open WebUI
-                    url: http://open-webui
+                    url: http://open-webui.homelab.home.arpa
                   - title: Grafana
-                    url: http://grafana:3000
+                    url: http://grafana.homelab.home.arpa
 
               - type: bookmarks
                 title: Ollama access
