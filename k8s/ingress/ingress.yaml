@@ -51,6 +51,26 @@ spec:
                 name: openserp
                 port:
                   number: 7000
+    - host: hermes.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hermes
+                port:
+                  number: 9119
+    - host: hermes-dashboard.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hermes
+                port:
+                  number: 9119
     - host: ollama.homelab.home.arpa
       http:
         paths:

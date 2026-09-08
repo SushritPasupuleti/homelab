@@ -61,6 +61,10 @@ data:
                     url: http://ollama.homelab.home.arpa
                   - title: Open WebUI
                     url: http://open-webui.homelab.home.arpa
+                  - title: Hermes
+                    url: http://hermes.homelab.home.arpa
+                  - title: Hermes Dashboard
+                    url: http://hermes-dashboard.homelab.home.arpa
                   - title: Home Assistant
                     url: http://homeassistant.homelab.home.arpa
                   - title: Jellyfin
@@ -72,29 +76,7 @@ data:
                   - title: File Browser
                     url: http://files.homelab.home.arpa
 
-              - type: monitor
-                title: Service uptime + response
-                style: compact
-                cache: 60s
-                sites:
-                  - title: Dashboard
-                    url: http://dashboard.homelab.home.arpa
-                  - title: Stock-EZ
-                    url: http://stock-ez.homelab.home.arpa
-                  - title: Portainer
-                    url: http://portainer.homelab.home.arpa
-                  - title: Grafana
-                    url: http://grafana.homelab.home.arpa
-                  - title: Prometheus
-                    url: http://prometheus.homelab.home.arpa
-                  - title: Open WebUI
-                    url: http://open-webui.homelab.home.arpa
-                  - title: OpenSERP
-                    url: http://openserp.homelab.home.arpa/docs
-                  - title: Home Assistant
-                    url: http://homeassistant.homelab.home.arpa
-                  - title: Ollama API
-                    url: http://ollama.homelab.home.arpa:11434/api/version
+
 
               - type: bookmarks
                 title: Core services
@@ -119,6 +101,10 @@ data:
                         url: http://open-webui.homelab.home.arpa
                       - title: OpenSERP
                         url: http://openserp.homelab.home.arpa/docs
+                      - title: Hermes
+                        url: http://hermes.homelab.home.arpa
+                      - title: Hermes Dashboard
+                        url: http://hermes-dashboard.homelab.home.arpa
                       - title: Ollama
                         url: http://ollama.homelab.home.arpa:11434
 
@@ -195,6 +181,8 @@ data:
                     url: http://open-webui.homelab.home.arpa
                   - title: OpenSERP
                     url: http://openserp.homelab.home.arpa/docs
+                  - title: Hermes Dashboard
+                    url: http://hermes-dashboard.homelab.home.arpa
                   - title: Jellyfin
                     url: http://media.homelab.home.arpa
                   - title: Plex

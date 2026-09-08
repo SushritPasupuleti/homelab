@@ -23,6 +23,7 @@ PORTAINER_IMAGE="${PORTAINER_IMAGE:-portainer/portainer-ce:latest}"
 HOME_ASSISTANT_IMAGE="${HOME_ASSISTANT_IMAGE:-ghcr.io/home-assistant/home-assistant:stable}"
 OPEN_WEBUI_IMAGE="${OPEN_WEBUI_IMAGE:-ghcr.io/open-webui/open-webui:main}"
 OPENSERP_IMAGE="${OPENSERP_IMAGE:-karust/openserp:latest}"
+HERMES_IMAGE="${HERMES_IMAGE:-nousresearch/hermes-agent:latest}"
 PROMETHEUS_IMAGE="${PROMETHEUS_IMAGE:-prom/prometheus:v2.53.2}"
 GRAFANA_IMAGE="${GRAFANA_IMAGE:-grafana/grafana:11.1.5}"
 GRAFANA_ADMIN_USER="${GRAFANA_ADMIN_USER:-admin}"
@@ -35,6 +36,9 @@ QBITTORRENT_USERNAME="${QBITTORRENT_USERNAME:-admin}"
 QBITTORRENT_PASSWORD="${QBITTORRENT_PASSWORD:-$(openssl rand -base64 24 | tr -d '\n' | tr '+/' '-_')}"
 FILEBROWSER_USERNAME="${FILEBROWSER_USERNAME:-admin}"
 FILEBROWSER_PASSWORD="${FILEBROWSER_PASSWORD:-$(openssl rand -base64 24 | tr -d '\n' | tr '+/' '-_')}"
+OPENSERP_HOST="${OPENSERP_HOST:-openserp.homelab.home.arpa}"
+HERMES_HOST="${HERMES_HOST:-hermes.homelab.home.arpa}"
+HERMES_DASHBOARD_HOST="${HERMES_DASHBOARD_HOST:-hermes-dashboard.homelab.home.arpa}"
 HOMELAB_SECRET_FILE="${HOMELAB_SECRET_FILE:-$ROOT_DIR/.homelab-secrets.env}"
 
 GPU_DETECTED="$(if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then echo true; elif [ -e /dev/nvidiactl ] || ls /dev/nvidia* >/dev/null 2>&1 2>/dev/null; then echo true; else echo false; fi)"
@@ -75,7 +79,7 @@ else
   OLLAMA_BACKEND_MODE="cpu"
 fi
 
-export NAMESPACE STOCK_EZ_IMAGE OLLAMA_IMAGE DASHBOARD_IMAGE PORTAINER_IMAGE HOME_ASSISTANT_IMAGE OPEN_WEBUI_IMAGE OPENSERP_IMAGE PROMETHEUS_IMAGE GRAFANA_IMAGE GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD QBITTORRENT_IMAGE FILEBROWSER_IMAGE PORTAINER_ADMIN_USER PORTAINER_ADMIN_PASSWORD QBITTORRENT_USERNAME QBITTORRENT_PASSWORD FILEBROWSER_USERNAME FILEBROWSER_PASSWORD HOMELAB_SECRET_FILE OLLAMA_USE_NVIDIA OLLAMA_GPU_COUNT OLLAMA_NUM_GPU OLLAMA_BACKEND_MODE OLLAMA_RUNTIME_CLASS OLLAMA_NVIDIA_VISIBLE_DEVICES OLLAMA_NVIDIA_DRIVER_CAPABILITIES OLLAMA_GPU_REQUEST_KEY OLLAMA_GPU_LIMIT_KEY
+export NAMESPACE STOCK_EZ_IMAGE OLLAMA_IMAGE DASHBOARD_IMAGE PORTAINER_IMAGE HOME_ASSISTANT_IMAGE OPEN_WEBUI_IMAGE OPENSERP_IMAGE HERMES_IMAGE PROMETHEUS_IMAGE GRAFANA_IMAGE GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD QBITTORRENT_IMAGE FILEBROWSER_IMAGE PORTAINER_ADMIN_USER PORTAINER_ADMIN_PASSWORD QBITTORRENT_USERNAME QBITTORRENT_PASSWORD FILEBROWSER_USERNAME FILEBROWSER_PASSWORD OPENSERP_HOST HERMES_HOST HERMES_DASHBOARD_HOST HOMELAB_SECRET_FILE OLLAMA_USE_NVIDIA OLLAMA_GPU_COUNT OLLAMA_NUM_GPU OLLAMA_BACKEND_MODE OLLAMA_RUNTIME_CLASS OLLAMA_NVIDIA_VISIBLE_DEVICES OLLAMA_NVIDIA_DRIVER_CAPABILITIES OLLAMA_GPU_REQUEST_KEY OLLAMA_GPU_LIMIT_KEY
 
 render_and_apply() {
   local file="$1"
@@ -117,6 +121,10 @@ log_homelab_credentials() {
   echo "  Username: $GRAFANA_ADMIN_USER"
   echo "  Password: $GRAFANA_ADMIN_PASSWORD"
   echo "Prometheus: http://prometheus.homelab.home.arpa"
+  echo "OpenSERP: http://$OPENSERP_HOST"
+  echo "  API docs: http://$OPENSERP_HOST/docs"
+  echo "Hermes: http://$HERMES_HOST"
+  echo "  Dashboard: http://$HERMES_DASHBOARD_HOST"
   echo "qBittorrent: http://torrent.homelab.home.arpa"
   echo "  Username: $QBITTORRENT_USERNAME"
   echo "  Password: $QBITTORRENT_PASSWORD"
@@ -135,6 +143,7 @@ kubectl set image -n "$NAMESPACE" deployment/portainer portainer="$PORTAINER_IMA
 kubectl set image -n "$NAMESPACE" deployment/home-assistant home-assistant="$HOME_ASSISTANT_IMAGE" || true
 kubectl set image -n "$NAMESPACE" deployment/open-webui open-webui="$OPEN_WEBUI_IMAGE" || true
 kubectl set image -n "$NAMESPACE" deployment/openserp openserp="$OPENSERP_IMAGE" || true
+kubectl set image -n "$NAMESPACE" deployment/hermes hermes="$HERMES_IMAGE" || true
 kubectl set image -n "$NAMESPACE" deployment/prometheus prometheus="$PROMETHEUS_IMAGE" || true
 kubectl set image -n "$NAMESPACE" deployment/grafana grafana="$GRAFANA_IMAGE" || true
 kubectl set image -n "$NAMESPACE" deployment/qbittorrent qbittorrent="$QBITTORRENT_IMAGE" || true
@@ -144,6 +153,7 @@ render_and_apply "$ROOT_DIR/k8s/stock-ez/configmap.yaml"
 render_and_apply "$ROOT_DIR/k8s/ollama/ollama.yaml"
 render_and_apply "$ROOT_DIR/k8s/open-webui/open-webui.yaml"
 render_and_apply "$ROOT_DIR/k8s/openserp/openserp.yaml"
+render_and_apply "$ROOT_DIR/k8s/hermes/hermes.yaml"
 render_and_apply "$ROOT_DIR/k8s/dashboard/configmap.yaml"
 render_and_apply "$ROOT_DIR/k8s/dashboard/dashboard.yaml"
 render_and_apply "$ROOT_DIR/k8s/monitoring/monitoring.yaml"
@@ -156,6 +166,7 @@ kubectl rollout status -n "$NAMESPACE" deployment/stock-ez --timeout=180s || tru
 kubectl rollout status -n "$NAMESPACE" deployment/ollama --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/open-webui --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/openserp --timeout=180s || true
+kubectl rollout status -n "$NAMESPACE" deployment/hermes --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/homelab-dashboard --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/prometheus --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/grafana --timeout=180s || true
