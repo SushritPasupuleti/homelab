@@ -28,7 +28,8 @@ ${RESOLVED_IP} open-webui.homelab.home.arpa
 ${RESOLVED_IP} openserp.homelab.home.arpa
 ${RESOLVED_IP} hermes.homelab.home.arpa
 ${RESOLVED_IP} hermes-dashboard.homelab.home.arpa
-${RESOLVED_IP} ollama.homelab.home.arpa
+${RESOLVED_IP} unsloth.homelab.home.arpa
+${RESOLVED_IP} unsloth-studio.homelab.home.arpa
 ${RESOLVED_IP} portainer.homelab.home.arpa
 ${RESOLVED_IP} grafana.homelab.home.arpa
 ${RESOLVED_IP} prometheus.homelab.home.arpa

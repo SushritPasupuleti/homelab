@@ -49,6 +49,8 @@ data:
                 sites:
                   - title: Dashboard
                     url: http://dashboard.homelab.home.arpa
+                  - title: Project README
+                    url: https://github.com/SushritPasupuleti/homelab/blob/main/README.md
                   - title: Stock-EZ
                     url: http://stock-ez.homelab.home.arpa
                   - title: Portainer
@@ -57,8 +59,10 @@ data:
                     url: http://grafana.homelab.home.arpa
                   - title: Prometheus
                     url: http://prometheus.homelab.home.arpa
-                  - title: Ollama
-                    url: http://ollama.homelab.home.arpa
+                  - title: Unsloth API
+                    url: http://unsloth.homelab.home.arpa
+                  - title: Unsloth Studio
+                    url: http://unsloth-studio.homelab.home.arpa
                   - title: Open WebUI
                     url: http://open-webui.homelab.home.arpa
                   - title: Hermes
@@ -76,8 +80,6 @@ data:
                   - title: File Browser
                     url: http://files.homelab.home.arpa
 
-
-
               - type: bookmarks
                 title: Core services
                 groups:
@@ -85,6 +87,8 @@ data:
                     links:
                       - title: Dashboard
                         url: http://dashboard.homelab.home.arpa
+                      - title: Project README
+                        url: https://github.com/SushritPasupuleti/homelab/blob/main/README.md
                       - title: Portainer
                         url: http://portainer.homelab.home.arpa
                       - title: Grafana
@@ -105,8 +109,10 @@ data:
                         url: http://hermes.homelab.home.arpa
                       - title: Hermes Dashboard
                         url: http://hermes-dashboard.homelab.home.arpa
-                      - title: Ollama
-                        url: http://ollama.homelab.home.arpa:11434
+                      - title: Unsloth API
+                        url: http://unsloth.homelab.home.arpa
+                      - title: Unsloth Studio
+                        url: http://unsloth-studio.homelab.home.arpa
 
           - size: full
             widgets:
@@ -179,6 +185,10 @@ data:
                     url: http://homeassistant.homelab.home.arpa
                   - title: Open WebUI
                     url: http://open-webui.homelab.home.arpa
+                  - title: Unsloth API
+                    url: http://unsloth.homelab.home.arpa
+                  - title: Unsloth Studio
+                    url: http://unsloth-studio.homelab.home.arpa
                   - title: OpenSERP
                     url: http://openserp.homelab.home.arpa/docs
                   - title: Hermes Dashboard
@@ -210,17 +220,17 @@ data:
                   - title: LAN access
                     links:
                       - title: Stock-EZ (IP)
-                        url: http://192.168.1.201
+                        url: http://192.168.0.6
                       - title: Portainer (IP)
-                        url: http://192.168.1.6:30900
+                        url: http://192.168.0.6:30900
                       - title: Home Assistant (IP)
-                        url: http://192.168.1.202:8123
+                        url: http://192.168.0.6:8123
                       - title: Open WebUI (IP)
-                        url: http://192.168.1.209
+                        url: http://192.168.0.6
                       - title: Grafana (IP)
-                        url: http://192.168.1.210:3000
-                      - title: Ollama (IP)
-                        url: http://192.168.1.207:11434
+                        url: http://192.168.0.6:3000
+                      - title: Unsloth Studio (IP)
+                        url: http://192.168.0.6
 
       - name: Monitoring
         columns:
@@ -689,141 +699,109 @@ data:
                     show-thumbnails: true
                     limit: 8
 
-      - name: Ollama
+      - name: Unsloth
         columns:
           - size: small
             widgets:
               - type: custom-api
-                title: Deployment mode
+                title: Service mode
                 cache: 30s
-                url: http://ollama:11434/api/ps
+                url: http://prometheus:9090/api/v1/query?query=kube_deployment_spec_replicas%7Bdeployment%3D%22unsloth%22%7D%20or%20vector%280%29
                 template: |
-                  {{ $models := .JSON.Array "models" }}
-                  {{ $mode := "CPU" }}
-                  {{ range $model := $models }}
-                    {{ if $model.Get "size_vram" }}{{ $mode = "GPU" }}{{ break }}{{ end }}
+                  {{ $replicas := .JSON.Float "data.result.0.value.1" }}
+                  {{ if eq (printf "%.0f" $replicas) "0" }}
+                    <div class="size-h1 color-primary">Disabled</div>
+                    <div class="color-subtle">execution mode</div>
+                    <div class="margin-top-5 color-subtle">Compute allocation: ${UNSLOTH_COMPUTE_MODE} · Unsloth has been scaled down and is currently disabled.</div>
+                  {{ else }}
+                    <div class="size-h1 color-primary">API ready</div>
+                    <div class="color-subtle">execution mode</div>
+                    <div class="margin-top-5 color-subtle">Compute allocation: ${UNSLOTH_COMPUTE_MODE} · The service is online and responding in OpenAI-compatible mode.</div>
                   {{ end }}
-                  <div class="size-h1 color-primary">{{ $mode }}</div>
-                  <div class="color-subtle">execution mode</div>
-                  <div class="margin-top-5 color-subtle">
-                    {{ if eq $mode "GPU" }}VRAM is active for loaded models{{ else }}No VRAM reported in the active model set{{ end }}
-                  </div>
 
               - type: custom-api
-                title: Loaded models
+                title: Available models
                 cache: 15s
-                url: http://ollama:11434/api/ps
+                url: http://unsloth:8000/v1/models
                 template: |
-                  {{ $models := .JSON.Array "models" }}
+                  {{ $models := .JSON.Array "data" }}
                   {{ if eq (len $models) 0 }}
-                    <p class="color-subtle">No models are currently loaded.</p>
+                    <p class="color-subtle">No models are currently exposed by the Unsloth API.</p>
                   {{ else }}
                     {{ range $model := $models }}
-                      {{ $name := $model.Get "name" }}
-                      {{ $size := $model.Get "size" }}
-                      {{ $vram := $model.Get "size_vram" }}
+                      {{ $id := $model.Get "id" }}
+                      {{ $ownedBy := $model.Get "owned_by" }}
                       <div class="list-item margin-bottom-8">
-                        <div><strong>{{ $name.String }}</strong></div>
+                        <div><strong>{{ $id.String }}</strong></div>
                         <div class="color-subtle">
-                          {{ if $size.String }}{{ $size.String }} bytes{{ end }}
-                          {{ if $vram.String }} · VRAM {{ $vram.String }} bytes{{ end }}
+                          {{ if $ownedBy.String }}Provider: {{ $ownedBy.String }}{{ end }}
                         </div>
                       </div>
                     {{ end }}
                   {{ end }}
 
               - type: monitor
-                title: Ollama endpoints
+                title: Unsloth endpoints
                 style: compact
                 cache: 30s
                 sites:
-                  - title: Ollama API
-                    url: http://ollama.homelab.home.arpa:11434
+                  - title: Unsloth API
+                    url: http://unsloth.homelab.home.arpa
                   - title: Open WebUI
                     url: http://open-webui.homelab.home.arpa
-                  - title: Grafana
-                    url: http://grafana.homelab.home.arpa
+                  - title: Hermes
+                    url: http://hermes.homelab.home.arpa
 
               - type: bookmarks
-                title: Ollama access
+                title: Unsloth access
                 groups:
                   - title: Links
                     links:
-                      - title: Ollama API
-                        url: http://ollama.homelab.home.arpa:11434
+                      - title: Unsloth API
+                        url: http://unsloth.homelab.home.arpa
                       - title: Open WebUI
                         url: http://open-webui.homelab.home.arpa
-                      - title: Model tags
-                        url: http://ollama.homelab.home.arpa:11434/api/tags
+                      - title: Model list
+                        url: http://unsloth.homelab.home.arpa/v1/models
 
           - size: full
             widgets:
               - type: custom-api
-                title: Installed model list
+                title: Model inventory
                 cache: 60s
-                url: http://ollama:11434/api/tags
+                url: http://unsloth:8000/v1/models
                 template: |
-                  {{ $models := .JSON.Array "models" }}
+                  {{ $models := .JSON.Array "data" }}
                   {{ if eq (len $models) 0 }}
-                    <p class="color-subtle">No models are installed yet.</p>
+                    <p class="color-subtle">No model inventory is available yet.</p>
                   {{ else }}
                     {{ range $model := $models }}
-                      {{ $name := $model.Get "name" }}
-                      {{ $details := $model.Get "details" }}
-                      {{ $family := $details.Get "family" }}
-                      {{ $parameterSize := $details.Get "parameter_size" }}
-                      {{ $quantization := $details.Get "quantization_level" }}
-                      {{ $format := $details.Get "format" }}
+                      {{ $id := $model.Get "id" }}
+                      {{ $ownedBy := $model.Get "owned_by" }}
                       <div class="list-item margin-bottom-8">
-                        <div><strong>{{ $name.String }}</strong></div>
+                        <div><strong>{{ $id.String }}</strong></div>
                         <div class="color-subtle">
-                          {{ if $family.String }}{{ $family.String }} · {{ end }}
-                          {{ if $parameterSize.String }}{{ $parameterSize.String }} · {{ end }}
-                          {{ if $quantization.String }}{{ $quantization.String }}{{ end }}
-                        </div>
-                        <div class="color-subtle">
-                          {{ if $format.String }}Format: {{ $format.String }}{{ end }}
+                          {{ if $ownedBy.String }}Owned by {{ $ownedBy.String }}{{ else }}OpenAI-compatible endpoint{{ end }}
                         </div>
                       </div>
                     {{ end }}
                   {{ end }}
 
               - type: custom-api
-                title: Runtime summary
+                title: API status
                 cache: 30s
-                url: http://ollama:11434/api/ps
+                url: http://prometheus:9090/api/v1/query?query=kube_deployment_spec_replicas%7Bdeployment%3D%22unsloth%22%7D%20or%20vector%280%29
                 template: |
-                  {{ $models := .JSON.Array "models" }}
-                  <div class="color-subtle">Loaded in memory: {{ len $models }} models</div>
-                  <div class="margin-top-10">
-                    {{ if eq (len $models) 0 }}
-                      <p class="color-subtle">No active model runtime data available.</p>
-                    {{ else }}
-                      {{ range $model := $models }}
-                        {{ $name := $model.Get "name" }}
-                        {{ $size := $model.Get "size" }}
-                        {{ $vram := $model.Get "size_vram" }}
-                        <div class="list-item margin-bottom-8">
-                          <div><strong>{{ $name.String }}</strong></div>
-                          <div class="color-subtle">
-                            {{ if $size.String }}Size: {{ $size.String }} bytes{{ end }}
-                            {{ if $vram.String }} · VRAM: {{ $vram.String }} bytes{{ end }}
-                          </div>
-                        </div>
-                      {{ end }}
-                    {{ end }}
-                  </div>
-
-              - type: custom-api
-                title: Server info
-                cache: 30s
-                url: http://ollama:11434/api/version
-                template: |
-                  <div class="color-subtle">Version</div>
-                  <div class="size-h1 color-primary">{{ .JSON.String "version" }}</div>
-                  <div class="margin-top-6 color-subtle">
-                    Open the local API or Open WebUI to inspect model health, requests, and runtime state.
-                  </div>
+                  {{ $replicas := .JSON.Float "data.result.0.value.1" }}
+                  {{ if eq (printf "%.0f" $replicas) "0" }}
+                    <div class="color-subtle">Status</div>
+                    <div class="size-h1 color-primary">Off</div>
+                    <div class="margin-top-6 color-subtle">Unsloth has been disabled and is not serving requests.</div>
+                  {{ else }}
+                    <div class="color-subtle">Status</div>
+                    <div class="size-h1 color-primary">On</div>
+                    <div class="margin-top-6 color-subtle">The Unsloth deployment is running and ready for requests.</div>
+                  {{ end }}
 
       - name: Tools
         columns:

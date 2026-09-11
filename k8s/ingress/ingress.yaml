@@ -5,11 +5,6 @@ metadata:
   namespace: homelab
 spec:
   ingressClassName: nginx
-  defaultBackend:
-    service:
-      name: homelab-dashboard
-      port:
-        number: 80
   rules:
     - host: stock-ez.homelab.home.arpa
       http:
@@ -71,16 +66,26 @@ spec:
                 name: hermes
                 port:
                   number: 9119
-    - host: ollama.homelab.home.arpa
+    - host: unsloth.homelab.home.arpa
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: ollama
+                name: unsloth
                 port:
-                  number: 11434
+                  number: 8000
+    - host: unsloth-studio.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: unsloth
+                port:
+                  number: 8000
     - host: portainer.homelab.home.arpa
       http:
         paths:

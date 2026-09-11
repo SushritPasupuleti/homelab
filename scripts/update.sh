@@ -15,6 +15,61 @@ if ! kubectl cluster-info >/dev/null 2>&1; then
   exit 1
 fi
 
+OLLAMA_ENABLED="${OLLAMA_ENABLED:-false}"
+UNSLOTH_ENABLED="${UNSLOTH_ENABLED:-true}"
+GPU_SERVICE="${GPU_SERVICE:-unsloth}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --disable-ollama|--ollama-disabled)
+      OLLAMA_ENABLED="false"
+      ;;
+    --enable-ollama)
+      OLLAMA_ENABLED="true"
+      ;;
+    --disable-unsloth|--unsloth-disabled)
+      UNSLOTH_ENABLED="false"
+      ;;
+    --enable-unsloth)
+      UNSLOTH_ENABLED="true"
+      ;;
+    --gpu-service)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --gpu-service. Use ollama, unsloth, none, or auto."
+        exit 1
+      fi
+      GPU_SERVICE="$2"
+      shift
+      ;;
+    --gpu-service=*)
+      GPU_SERVICE="${1#*=}"
+      ;;
+    --help|-h)
+      echo "Usage: ./scripts/update.sh [--disable-ollama|--enable-ollama] [--disable-unsloth|--enable-unsloth] [--gpu-service ollama|unsloth|none|auto]"
+      echo "       or: OLLAMA_ENABLED=false UNSLOTH_ENABLED=false GPU_SERVICE=unsloth ./scripts/update.sh"
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1"
+      echo "Use --help for usage."
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+GPU_SERVICE="${GPU_SERVICE,,}"
+case "$GPU_SERVICE" in
+  ollama|unsloth|none|auto) ;;
+  *)
+    echo "Unsupported GPU service: $GPU_SERVICE"
+    echo "Use one of: ollama, unsloth, none, auto"
+    exit 1
+    ;;
+esac
+
+export OLLAMA_ENABLED UNSLOTH_ENABLED GPU_SERVICE
+
 NAMESPACE="${NAMESPACE:-homelab}"
 STOCK_EZ_IMAGE="${STOCK_EZ_IMAGE:-ghcr.io/sushritpasupuleti/stock-ez:latest}"
 OLLAMA_IMAGE="${OLLAMA_IMAGE:-ollama/ollama:latest}"
@@ -22,6 +77,7 @@ DASHBOARD_IMAGE="${DASHBOARD_IMAGE:-glanceapp/glance:latest}"
 PORTAINER_IMAGE="${PORTAINER_IMAGE:-portainer/portainer-ce:latest}"
 HOME_ASSISTANT_IMAGE="${HOME_ASSISTANT_IMAGE:-ghcr.io/home-assistant/home-assistant:stable}"
 OPEN_WEBUI_IMAGE="${OPEN_WEBUI_IMAGE:-ghcr.io/open-webui/open-webui:main}"
+UNSLOTH_IMAGE="${UNSLOTH_IMAGE:-unsloth/unsloth:latest}"
 OPENSERP_IMAGE="${OPENSERP_IMAGE:-karust/openserp:latest}"
 HERMES_IMAGE="${HERMES_IMAGE:-nousresearch/hermes-agent:latest}"
 PROMETHEUS_IMAGE="${PROMETHEUS_IMAGE:-prom/prometheus:v2.53.2}"
@@ -39,24 +95,123 @@ FILEBROWSER_PASSWORD="${FILEBROWSER_PASSWORD:-$(openssl rand -base64 24 | tr -d 
 OPENSERP_HOST="${OPENSERP_HOST:-openserp.homelab.home.arpa}"
 HERMES_HOST="${HERMES_HOST:-hermes.homelab.home.arpa}"
 HERMES_DASHBOARD_HOST="${HERMES_DASHBOARD_HOST:-hermes-dashboard.homelab.home.arpa}"
+UNSLOTH_HOST="${UNSLOTH_HOST:-unsloth.homelab.home.arpa}"
+UNSLOTH_STUDIO_HOST="${UNSLOTH_STUDIO_HOST:-unsloth-studio.homelab.home.arpa}"
+UNSLOTH_API_KEY="${UNSLOTH_API_KEY:-unsloth}"
+UNSLOTH_MODEL="${UNSLOTH_MODEL:-qwen3:27b}"
+UNSLOTH_STUDIO_USERNAME="${UNSLOTH_STUDIO_USERNAME:-unsloth}"
+UNSLOTH_STUDIO_PASSWORD="${UNSLOTH_STUDIO_PASSWORD:-CozyEvergladeMomHuman}"
 HOMELAB_SECRET_FILE="${HOMELAB_SECRET_FILE:-$ROOT_DIR/.homelab-secrets.env}"
 
 GPU_DETECTED="$(if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then echo true; elif [ -e /dev/nvidiactl ] || ls /dev/nvidia* >/dev/null 2>&1 2>/dev/null; then echo true; else echo false; fi)"
-NODE_GPU_ALLOCATABLE=""
+NODE_GPU_ALLOCATABLE="0"
 if kubectl get nodes -o jsonpath='{range .items[*]}{.status.allocatable.nvidia\.com/gpu}{"\n"}{end}' >/dev/null 2>&1; then
-  NODE_GPU_ALLOCATABLE="$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.allocatable.nvidia\.com/gpu}{"\n"}{end}' 2>/dev/null | awk 'BEGIN {found=0} $1 ~ /^[0-9]+$/ && $1 > 0 {print $1; found=1} END {if (!found) exit 0}' || true)"
+  NODE_GPU_ALLOCATABLE="$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.allocatable.nvidia\.com/gpu}{"\n"}{end}' 2>/dev/null | awk 'NF {print $1; exit}' || echo 0)"
 fi
+if [ -z "${NODE_GPU_ALLOCATABLE}" ]; then
+  NODE_GPU_ALLOCATABLE="0"
+fi
+NVIDIA_ENABLE_REASON="Node GPU capacity is not yet available to Kubernetes."
+KUBE_CONTAINER_RUNTIME="unknown"
+if kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.containerRuntimeVersion}' >/dev/null 2>&1; then
+  KUBE_CONTAINER_RUNTIME="$(kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.containerRuntimeVersion}' 2>/dev/null || true)"
+fi
+case "${KUBE_CONTAINER_RUNTIME}" in
+  *docker*|*cri-dockerd*) KUBE_CONTAINER_RUNTIME="docker" ;;
+  *containerd*) KUBE_CONTAINER_RUNTIME="containerd" ;;
+  *cri-o*) KUBE_CONTAINER_RUNTIME="cri-o" ;;
+  *) KUBE_CONTAINER_RUNTIME="unknown" ;;
+esac
+
+DOCKER_NVIDIA_RUNTIME_AVAILABLE="false"
+CONTAINERD_NVIDIA_RUNTIME_AVAILABLE="false"
+if command -v docker >/dev/null 2>&1; then
+  if docker info --format '{{json .Runtimes}}' 2>/dev/null | grep -Eq 'nvidia|nvidia-cdi'; then
+    DOCKER_NVIDIA_RUNTIME_AVAILABLE="true"
+  fi
+fi
+if command -v nvidia-container-runtime >/dev/null 2>&1 || [ -x /usr/bin/nvidia-container-runtime ]; then
+  CONTAINERD_NVIDIA_RUNTIME_AVAILABLE="true"
+fi
+
 OLLAMA_USE_NVIDIA="${OLLAMA_USE_NVIDIA:-$GPU_DETECTED}"
+UNSLOTH_USE_NVIDIA="${UNSLOTH_USE_NVIDIA:-false}"
 OLLAMA_GPU_COUNT="${OLLAMA_GPU_COUNT:-1}"
 OLLAMA_BACKEND_MODE="cpu"
 OLLAMA_NUM_GPU="0"
 
+case "$GPU_SERVICE" in
+  ollama)
+    OLLAMA_USE_NVIDIA="${OLLAMA_USE_NVIDIA:-true}"
+    UNSLOTH_USE_NVIDIA="false"
+    ;;
+  unsloth)
+    UNSLOTH_USE_NVIDIA="${UNSLOTH_USE_NVIDIA:-true}"
+    OLLAMA_USE_NVIDIA="false"
+    ;;
+  none)
+    OLLAMA_USE_NVIDIA="false"
+    UNSLOTH_USE_NVIDIA="false"
+    ;;
+  auto)
+    if [ "${OLLAMA_USE_NVIDIA:-false}" = "true" ] && [ "${UNSLOTH_USE_NVIDIA:-false}" = "true" ]; then
+      UNSLOTH_USE_NVIDIA="false"
+    fi
+    ;;
+esac
+
 if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ "${GPU_DETECTED}" != "true" ]; then
+  echo "No NVIDIA GPU detected on the host; forcing Ollama to CPU mode."
   OLLAMA_USE_NVIDIA="false"
 fi
 
-if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ -z "${NODE_GPU_ALLOCATABLE}" ]; then
+if [ "${UNSLOTH_USE_NVIDIA}" = "true" ] && [ "${GPU_DETECTED}" != "true" ]; then
+  echo "No NVIDIA GPU detected on the host; forcing Unsloth to CPU mode."
+  UNSLOTH_USE_NVIDIA="false"
+fi
+
+if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ "${NODE_GPU_ALLOCATABLE:-0}" = "0" ]; then
+  echo "Kubernetes is not advertising any allocatable nvidia.com/gpu on the node; host GPU is present, but the cluster is not exposing GPU capacity to pods. Ollama remains in CPU mode until nvidia.com/gpu is available."
+  NVIDIA_ENABLE_REASON="Kubernetes is not advertising any allocatable nvidia.com/gpu on the node."
   OLLAMA_USE_NVIDIA="false"
+fi
+
+if [ "${UNSLOTH_USE_NVIDIA}" = "true" ] && [ "${NODE_GPU_ALLOCATABLE:-0}" = "0" ]; then
+  echo "Kubernetes is not advertising any allocatable nvidia.com/gpu on the node; forcing Unsloth to CPU mode."
+  UNSLOTH_USE_NVIDIA="false"
+fi
+
+if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ "${KUBE_CONTAINER_RUNTIME}" = "docker" ] && [ "${DOCKER_NVIDIA_RUNTIME_AVAILABLE}" != "true" ]; then
+  echo "Docker is the node runtime, but the NVIDIA Container Toolkit is not configured for Docker; forcing Ollama to CPU mode."
+  NVIDIA_ENABLE_REASON="Docker is configured as the node runtime, but the NVIDIA Docker runtime is not available."
+  OLLAMA_USE_NVIDIA="false"
+fi
+
+if [ "${UNSLOTH_USE_NVIDIA}" = "true" ] && [ "${KUBE_CONTAINER_RUNTIME}" = "docker" ] && [ "${DOCKER_NVIDIA_RUNTIME_AVAILABLE}" != "true" ]; then
+  echo "Docker is the node runtime, but the NVIDIA Container Toolkit is not configured for Docker; forcing Unsloth to CPU mode."
+  UNSLOTH_USE_NVIDIA="false"
+fi
+
+if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ "${KUBE_CONTAINER_RUNTIME}" = "containerd" ] && [ "${CONTAINERD_NVIDIA_RUNTIME_AVAILABLE}" != "true" ]; then
+  echo "containerd is the node runtime, but the NVIDIA runtime is not configured; forcing Ollama to CPU mode."
+  NVIDIA_ENABLE_REASON="containerd is configured as the node runtime, but the NVIDIA runtime is not available."
+  OLLAMA_USE_NVIDIA="false"
+fi
+
+if [ "${UNSLOTH_USE_NVIDIA}" = "true" ] && [ "${KUBE_CONTAINER_RUNTIME}" = "containerd" ] && [ "${CONTAINERD_NVIDIA_RUNTIME_AVAILABLE}" != "true" ]; then
+  echo "containerd is the node runtime, but the NVIDIA runtime is not configured; forcing Unsloth to CPU mode."
+  UNSLOTH_USE_NVIDIA="false"
+fi
+
+if [ "${OLLAMA_USE_NVIDIA}" = "true" ] && [ "${KUBE_CONTAINER_RUNTIME}" = "containerd" ] && ! kubectl get runtimeclass nvidia >/dev/null 2>&1; then
+  echo "The nvidia RuntimeClass is missing for the containerd node runtime; forcing Ollama to CPU mode."
+  NVIDIA_ENABLE_REASON="The required nvidia RuntimeClass is missing for the containerd runtime."
+  OLLAMA_USE_NVIDIA="false"
+fi
+
+if [ "${UNSLOTH_USE_NVIDIA}" = "true" ] && [ "${KUBE_CONTAINER_RUNTIME}" = "containerd" ] && ! kubectl get runtimeclass nvidia >/dev/null 2>&1; then
+  echo "The nvidia RuntimeClass is missing for the containerd node runtime; forcing Unsloth to CPU mode."
+  UNSLOTH_USE_NVIDIA="false"
 fi
 
 if [ "${OLLAMA_USE_NVIDIA}" = "true" ]; then
@@ -79,7 +234,58 @@ else
   OLLAMA_BACKEND_MODE="cpu"
 fi
 
-export NAMESPACE STOCK_EZ_IMAGE OLLAMA_IMAGE DASHBOARD_IMAGE PORTAINER_IMAGE HOME_ASSISTANT_IMAGE OPEN_WEBUI_IMAGE OPENSERP_IMAGE HERMES_IMAGE PROMETHEUS_IMAGE GRAFANA_IMAGE GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD QBITTORRENT_IMAGE FILEBROWSER_IMAGE PORTAINER_ADMIN_USER PORTAINER_ADMIN_PASSWORD QBITTORRENT_USERNAME QBITTORRENT_PASSWORD FILEBROWSER_USERNAME FILEBROWSER_PASSWORD OPENSERP_HOST HERMES_HOST HERMES_DASHBOARD_HOST HOMELAB_SECRET_FILE OLLAMA_USE_NVIDIA OLLAMA_GPU_COUNT OLLAMA_NUM_GPU OLLAMA_BACKEND_MODE OLLAMA_RUNTIME_CLASS OLLAMA_NVIDIA_VISIBLE_DEVICES OLLAMA_NVIDIA_DRIVER_CAPABILITIES OLLAMA_GPU_REQUEST_KEY OLLAMA_GPU_LIMIT_KEY
+UNSLOTH_GPU_COUNT="${UNSLOTH_GPU_COUNT:-${OLLAMA_GPU_COUNT:-1}}"
+UNSLOTH_RUNTIME_CLASS=""
+UNSLOTH_NVIDIA_VISIBLE_DEVICES=""
+UNSLOTH_NVIDIA_DRIVER_CAPABILITIES=""
+UNSLOTH_GPU_REQUEST_KEY="nvidia.com/gpu: \"0\""
+UNSLOTH_GPU_LIMIT_KEY="nvidia.com/gpu: \"0\""
+
+if [ "${UNSLOTH_USE_NVIDIA}" = "true" ] && [ "${NODE_GPU_ALLOCATABLE:-0}" = "0" ]; then
+  echo "Kubernetes is not advertising any allocatable nvidia.com/gpu; forcing Unsloth to CPU mode."
+  UNSLOTH_USE_NVIDIA="false"
+fi
+
+if [ "${UNSLOTH_USE_NVIDIA}" = "true" ] && [ "${KUBE_CONTAINER_RUNTIME:-unknown}" = "containerd" ]; then
+  UNSLOTH_RUNTIME_CLASS="nvidia"
+  UNSLOTH_NVIDIA_VISIBLE_DEVICES="all"
+  UNSLOTH_NVIDIA_DRIVER_CAPABILITIES="compute,utility"
+  UNSLOTH_GPU_REQUEST_KEY="nvidia.com/gpu: \"${UNSLOTH_GPU_COUNT}\""
+  UNSLOTH_GPU_LIMIT_KEY="nvidia.com/gpu: \"${UNSLOTH_GPU_COUNT}\""
+elif [ "${UNSLOTH_USE_NVIDIA}" = "true" ] && [ "${KUBE_CONTAINER_RUNTIME:-unknown}" = "docker" ]; then
+  UNSLOTH_NVIDIA_VISIBLE_DEVICES="all"
+  UNSLOTH_NVIDIA_DRIVER_CAPABILITIES="compute,utility"
+  UNSLOTH_GPU_REQUEST_KEY="nvidia.com/gpu: \"${UNSLOTH_GPU_COUNT}\""
+  UNSLOTH_GPU_LIMIT_KEY="nvidia.com/gpu: \"${UNSLOTH_GPU_COUNT}\""
+fi
+
+OLLAMA_COMPUTE_MODE="GPU"
+UNSLOTH_COMPUTE_MODE="GPU"
+if [ "${OLLAMA_USE_NVIDIA}" = "true" ]; then OLLAMA_COMPUTE_MODE="GPU"; else OLLAMA_COMPUTE_MODE="CPU"; fi
+if [ "${UNSLOTH_USE_NVIDIA}" = "true" ]; then UNSLOTH_COMPUTE_MODE="GPU"; else UNSLOTH_COMPUTE_MODE="CPU"; fi
+
+export NAMESPACE STOCK_EZ_IMAGE OLLAMA_IMAGE DASHBOARD_IMAGE PORTAINER_IMAGE HOME_ASSISTANT_IMAGE OPEN_WEBUI_IMAGE UNSLOTH_IMAGE OPENSERP_IMAGE HERMES_IMAGE PROMETHEUS_IMAGE GRAFANA_IMAGE GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD QBITTORRENT_IMAGE FILEBROWSER_IMAGE PORTAINER_ADMIN_USER PORTAINER_ADMIN_PASSWORD QBITTORRENT_USERNAME QBITTORRENT_PASSWORD FILEBROWSER_USERNAME FILEBROWSER_PASSWORD OPENSERP_HOST HERMES_HOST HERMES_DASHBOARD_HOST UNSLOTH_HOST UNSLOTH_STUDIO_HOST UNSLOTH_API_KEY UNSLOTH_MODEL UNSLOTH_STUDIO_USERNAME UNSLOTH_STUDIO_PASSWORD HOMELAB_SECRET_FILE OLLAMA_USE_NVIDIA OLLAMA_GPU_COUNT OLLAMA_NUM_GPU OLLAMA_BACKEND_MODE OLLAMA_RUNTIME_CLASS OLLAMA_NVIDIA_VISIBLE_DEVICES OLLAMA_NVIDIA_DRIVER_CAPABILITIES OLLAMA_GPU_REQUEST_KEY OLLAMA_GPU_LIMIT_KEY UNSLOTH_USE_NVIDIA UNSLOTH_GPU_COUNT UNSLOTH_RUNTIME_CLASS UNSLOTH_NVIDIA_VISIBLE_DEVICES UNSLOTH_NVIDIA_DRIVER_CAPABILITIES UNSLOTH_GPU_REQUEST_KEY UNSLOTH_GPU_LIMIT_KEY OLLAMA_ENABLED UNSLOTH_ENABLED GPU_SERVICE OLLAMA_COMPUTE_MODE UNSLOTH_COMPUTE_MODE KUBE_CONTAINER_RUNTIME NODE_GPU_ALLOCATABLE GPU_DETECTED DOCKER_NVIDIA_RUNTIME_AVAILABLE CONTAINERD_NVIDIA_RUNTIME_AVAILABLE NVIDIA_ENABLE_REASON
+
+print_gpu_debug_context() {
+  echo
+  echo "=== GPU debug context ==="
+  echo "GPU service selected: ${GPU_SERVICE}"
+  echo "Host GPU detected: ${GPU_DETECTED}"
+  echo "Kubernetes allocatable nvidia.com/gpu: ${NODE_GPU_ALLOCATABLE:-0}"
+  echo "Detected container runtime: ${KUBE_CONTAINER_RUNTIME}"
+  echo "Docker NVIDIA runtime configured: ${DOCKER_NVIDIA_RUNTIME_AVAILABLE}"
+  echo "containerd NVIDIA runtime configured: ${CONTAINERD_NVIDIA_RUNTIME_AVAILABLE}"
+  echo "Ollama GPU mode: ${OLLAMA_USE_NVIDIA}"
+  echo "Unsloth GPU mode: ${UNSLOTH_USE_NVIDIA}"
+  echo "Unsloth GPU request key: ${UNSLOTH_GPU_REQUEST_KEY}"
+  echo "Unsloth GPU limit key: ${UNSLOTH_GPU_LIMIT_KEY}"
+  echo "Unsloth runtime class: ${UNSLOTH_RUNTIME_CLASS:-none}"
+  if [ "${UNSLOTH_USE_NVIDIA}" = "false" ]; then
+    echo "Unsloth GPU reason: ${NVIDIA_ENABLE_REASON}"
+  fi
+  echo "========================="
+  echo
+}
 
 render_and_apply() {
   local file="$1"
@@ -90,9 +296,25 @@ from pathlib import Path
 path = Path(sys.argv[1])
 text = path.read_text()
 for key, value in sorted(os.environ.items()):
+    if key.endswith("GPU_REQUEST_KEY") and value == "":
+        value = 'nvidia.com/gpu: "0"'
+    if key.endswith("GPU_LIMIT_KEY") and value == "":
+        value = 'nvidia.com/gpu: "0"'
+    if key in {"OLLAMA_RUNTIME_CLASS", "UNSLOTH_RUNTIME_CLASS"} and value == "":
+        value = ""
     text = text.replace(f"${{{key}}}", value)
 print(text)
 PY
+}
+
+set_service_enabled() {
+  local deployment_name="$1"
+  local enabled_value="${2:-true}"
+  if [ "${enabled_value}" = "true" ]; then
+    kubectl scale -n "$NAMESPACE" deployment/"$deployment_name" --replicas=1 >/dev/null 2>&1 || true
+  else
+    kubectl scale -n "$NAMESPACE" deployment/"$deployment_name" --replicas=0 >/dev/null 2>&1 || true
+  fi
 }
 
 write_homelab_secrets() {
@@ -107,6 +329,8 @@ QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME}
 QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD}
 FILEBROWSER_USERNAME=${FILEBROWSER_USERNAME}
 FILEBROWSER_PASSWORD=${FILEBROWSER_PASSWORD}
+UNSLOTH_STUDIO_USERNAME=${UNSLOTH_STUDIO_USERNAME}
+UNSLOTH_STUDIO_PASSWORD=${UNSLOTH_STUDIO_PASSWORD}
 EOF
   chmod 600 "$HOMELAB_SECRET_FILE"
 }
@@ -131,13 +355,29 @@ log_homelab_credentials() {
   echo "File Browser: http://files.homelab.home.arpa"
   echo "  Username: $FILEBROWSER_USERNAME"
   echo "  Password: $FILEBROWSER_PASSWORD"
+  echo "Unsloth Studio: http://$UNSLOTH_STUDIO_HOST"
+  echo "  Username: $UNSLOTH_STUDIO_USERNAME"
+  echo "  Password: $UNSLOTH_STUDIO_PASSWORD"
   echo "  Secret file: $HOMELAB_SECRET_FILE"
   echo "==========================="
   echo
 }
 
+print_gpu_debug_context
+
 kubectl set image -n "$NAMESPACE" deployment/stock-ez stock-ez="$STOCK_EZ_IMAGE" || true
-kubectl set image -n "$NAMESPACE" deployment/ollama ollama="$OLLAMA_IMAGE" || true
+if [ "${OLLAMA_ENABLED}" = "true" ]; then
+  kubectl set image -n "$NAMESPACE" deployment/ollama ollama="$OLLAMA_IMAGE" || true
+else
+  echo "Ollama disabled via OLLAMA_ENABLED=false; scaling deployment/ollama to 0."
+  set_service_enabled "ollama" "false"
+fi
+if [ "${UNSLOTH_ENABLED}" = "true" ]; then
+  kubectl set image -n "$NAMESPACE" deployment/unsloth unsloth="$UNSLOTH_IMAGE" || true
+else
+  echo "Unsloth disabled via UNSLOTH_ENABLED=false; scaling deployment/unsloth to 0."
+  set_service_enabled "unsloth" "false"
+fi
 kubectl set image -n "$NAMESPACE" deployment/homelab-dashboard homelab-dashboard="$DASHBOARD_IMAGE" || true
 kubectl set image -n "$NAMESPACE" deployment/portainer portainer="$PORTAINER_IMAGE" || true
 kubectl set image -n "$NAMESPACE" deployment/home-assistant home-assistant="$HOME_ASSISTANT_IMAGE" || true
@@ -150,7 +390,16 @@ kubectl set image -n "$NAMESPACE" deployment/qbittorrent qbittorrent="$QBITTORRE
 kubectl set image -n "$NAMESPACE" deployment/filebrowser filebrowser="$FILEBROWSER_IMAGE" || true
 
 render_and_apply "$ROOT_DIR/k8s/stock-ez/configmap.yaml"
-render_and_apply "$ROOT_DIR/k8s/ollama/ollama.yaml"
+if [ "${OLLAMA_ENABLED}" = "true" ]; then
+  render_and_apply "$ROOT_DIR/k8s/ollama/ollama.yaml"
+else
+  set_service_enabled "ollama" "false"
+fi
+if [ "${UNSLOTH_ENABLED}" = "true" ]; then
+  render_and_apply "$ROOT_DIR/k8s/unsloth/unsloth.yaml"
+else
+  set_service_enabled "unsloth" "false"
+fi
 render_and_apply "$ROOT_DIR/k8s/open-webui/open-webui.yaml"
 render_and_apply "$ROOT_DIR/k8s/openserp/openserp.yaml"
 render_and_apply "$ROOT_DIR/k8s/hermes/hermes.yaml"
@@ -163,7 +412,16 @@ render_and_apply "$ROOT_DIR/k8s/media/filebrowser.yaml"
 render_and_apply "$ROOT_DIR/k8s/portainer/portainer.yaml"
 
 kubectl rollout status -n "$NAMESPACE" deployment/stock-ez --timeout=180s || true
-kubectl rollout status -n "$NAMESPACE" deployment/ollama --timeout=180s || true
+if [ "${OLLAMA_ENABLED}" = "true" ]; then
+  kubectl rollout status -n "$NAMESPACE" deployment/ollama --timeout=180s || true
+else
+  kubectl scale -n "$NAMESPACE" deployment/ollama --replicas=0 >/dev/null 2>&1 || true
+fi
+if [ "${UNSLOTH_ENABLED}" = "true" ]; then
+  kubectl rollout status -n "$NAMESPACE" deployment/unsloth --timeout=180s || true
+else
+  kubectl scale -n "$NAMESPACE" deployment/unsloth --replicas=0 >/dev/null 2>&1 || true
+fi
 kubectl rollout status -n "$NAMESPACE" deployment/open-webui --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/openserp --timeout=180s || true
 kubectl rollout status -n "$NAMESPACE" deployment/hermes --timeout=180s || true

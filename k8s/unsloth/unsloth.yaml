@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unsloth
+  namespace: homelab
+  labels:
+    app: unsloth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unsloth
+  template:
+    metadata:
+      labels:
+        app: unsloth
+    spec:
+      runtimeClassName: ${UNSLOTH_RUNTIME_CLASS}
+      containers:
+        - name: unsloth
+          image: ${UNSLOTH_IMAGE}
+          command: ["/usr/local/bin/unsloth-studio-launch"]
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+            - containerPort: 8888
+              name: studio
+          env:
+            - name: UNSLOTH_STUDIO_HOME
+              value: /opt/unsloth-studio
+            - name: UNSLOTH_ALLOW_CPU
+              value: "1"
+            - name: UNSLOTH_CPU_THREADS
+              value: "8"
+            - name: CUDA_VISIBLE_DEVICES
+              value: "${UNSLOTH_NVIDIA_VISIBLE_DEVICES}"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "${UNSLOTH_NVIDIA_VISIBLE_DEVICES}"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "${UNSLOTH_NVIDIA_DRIVER_CAPABILITIES}"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 40
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          volumeMounts:
+            - name: unsloth-data
+              mountPath: /workspace
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+              ${UNSLOTH_GPU_REQUEST_KEY}
+            limits:
+              cpu: 4
+              memory: 8Gi
+              ${UNSLOTH_GPU_LIMIT_KEY}
+      volumes:
+        - name: unsloth-data
+          persistentVolumeClaim:
+            claimName: unsloth-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: unsloth-data
+  namespace: homelab
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: unsloth
+  namespace: homelab
+  labels:
+    app: unsloth
+spec:
+  selector:
+    app: unsloth
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+    - name: studio
+      port: 8888
+      targetPort: 8888
+      protocol: TCP

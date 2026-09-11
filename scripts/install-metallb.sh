@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-METALLB_IP_POOL="${METALLB_IP_POOL:-192.168.0.2-192.168.0.253}"
+# Keep the ingress IP stable across cluster restarts by reserving a single
+# static address in the LAN and excluding it from the DHCP pool.
+METALLB_IP_POOL="${METALLB_IP_POOL:-192.168.0.6-192.168.0.6}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml

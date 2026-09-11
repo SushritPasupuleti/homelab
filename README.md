@@ -7,32 +7,34 @@ This repository provisions a Kubernetes-based homelab for AI, automation, media,
 ```mermaid
 flowchart LR
     User[LAN clients / browsers / devices] --> DNS[AdGuard Home or local DNS]
-    DNS --> Ingress[Ingress NGINX / MetalLB IP]
+    DNS --> Ingress[Ingress NGINX / fixed MetalLB IP]
     Ingress --> Dashboard[Homepage dashboard]
     Ingress --> WebUI[Open WebUI]
+    Ingress --> UnslothAPI[Unsloth API]
+    Ingress --> UnslothStudio[Unsloth Studio]
     Ingress --> Hermes[Hermes gateway + dashboard]
     Ingress --> HA[Home Assistant]
     Ingress --> Media[Jellyfin / Plex / FileBrowser]
     Ingress --> Apps[Stock-EZ / Portainer / Grafana / Prometheus]
 
-    WebUI --> Ollama[Ollama]
-    Hermes --> Ollama
-    Hermes --> Search[OpenSERP / search backend]
-    WebUI --> Search
-    Ollama --> GPU[NVIDIA GPU if available]
+    WebUI --> UnslothAPI
+    UnslothStudio --> UnslothAPI
+    Hermes --> OpenSERP[OpenSERP / search backend]
+    WebUI --> OpenSERP
+    UnslothAPI --> GPU[NVIDIA GPU if available]
     Apps --> K8s[Kubernetes cluster services]
 ```
 
 ## Included services
 
-- Stock-EZ for app workloads and reporting
-- Ollama for local model serving
-- Open WebUI for a browser-based chat interface and model management
+- Stock-EZ for app workloads and internal reporting
+- Unsloth API and Studio as the primary local AI stack
+- Open WebUI for browser-based chat and model access
 - OpenSERP as the local search backend used by Hermes and related AI tooling
 - Hermes as a standalone agent gateway and dashboard
 - Homepage dashboard for service discovery and quick access
 - Prometheus and Grafana for metrics, health, and dashboards
-- Portainer for cluster/container management
+- Portainer for cluster and container management
 - Home Assistant for smart-home automation and local control
 - Jellyfin, Plex, and File Browser for media access
 - qBittorrent for LAN downloads
@@ -43,7 +45,7 @@ flowchart LR
 1. Use a single ingress entrypoint for LAN hostnames.
 2. Prefer LAN DNS (for example AdGuard Home) over ad hoc /etc/hosts overrides.
 3. Keep inter-service communication inside the Kubernetes cluster via service DNS names.
-4. Use the MetalLB pool to match the LAN subnet and avoid stale IP assumptions.
+4. Pin the MetalLB ingress IP so the entrypoint stays stable across restarts and reboots.
 5. Keep public-facing URLs stable and intentionally namespaced under `.homelab.home.arpa`.
 6. Treat DNS and ingress as a first-class part of the stack; 404s are often a routing or hostname issue rather than an app issue.
 
@@ -52,6 +54,8 @@ flowchart LR
 The stack is intended to be reachable through hostnames such as:
 
 - `dashboard.homelab.home.arpa`
+- `unsloth.homelab.home.arpa`
+- `unsloth-studio.homelab.home.arpa`
 - `open-webui.homelab.home.arpa`
 - `openserp.homelab.home.arpa`
 - `hermes.homelab.home.arpa`
@@ -64,23 +68,25 @@ The stack is intended to be reachable through hostnames such as:
 
 Use a DNS server on the LAN, ideally AdGuard Home, as the authoritative source for those hostnames. Put the ingress IP there rather than a node IP or stale value.
 
+The active ingress is pinned to `192.168.0.6` in this repo and should remain stable across restarts.
+
 Example:
 
 ```text
-dashboard.homelab.home.arpa  -> 192.168.0.10
-open-webui.homelab.home.arpa -> 192.168.0.10
-openserp.homelab.home.arpa   -> 192.168.0.10
-hermes.homelab.home.arpa     -> 192.168.0.10
+dashboard.homelab.home.arpa      -> 192.168.0.6
+unsloth.homelab.home.arpa        -> 192.168.0.6
+unsloth-studio.homelab.home.arpa -> 192.168.0.6
+open-webui.homelab.home.arpa     -> 192.168.0.6
+openserp.homelab.home.arpa       -> 192.168.0.6
+hermes.homelab.home.arpa         -> 192.168.0.6
 ```
-
-where `192.168.0.10` is the ingress or MetalLB address assigned to the cluster.
 
 ### Fallback setup
 
 If there is no LAN DNS server, use a host override on the client. This is fine for a lab but should not be treated as the network-wide solution.
 
 ```bash
-sudo sh -c 'echo "192.168.0.10 dashboard.homelab.home.arpa open-webui.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa" >> /etc/hosts'
+sudo sh -c 'echo "192.168.0.6 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa open-webui.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa" >> /etc/hosts'
 ```
 
 The helper script in this repo can generate a host-file style entry. It prefers the ingress IP when it can detect one, and falls back to the node IP only when needed.
@@ -95,7 +101,7 @@ On NixOS, prefer `networking.extraHosts` or your own Nix-managed DNS config inst
 
 ```nix
 networking.extraHosts = ''
-  192.168.0.10 dashboard.homelab.home.arpa open-webui.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa
+  192.168.0.6 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa open-webui.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa
 '';
 ```
 
@@ -110,7 +116,7 @@ sudo nixos-rebuild switch
 This is the pickup from the most recent troubleshooting cycle:
 
 - keep the router DHCP/LAN range and MetalLB pool aligned
-- set the MetalLB pool to a range inside the router subnet, for example `192.168.0.2-192.168.0.253`
+- pin the MetalLB pool to a static ingress IP in the active LAN subnet, for example `192.168.0.6-192.168.0.6`
 - use AdGuard Home or another LAN DNS server as the canonical resolver for `*.homelab.home.arpa`
 - avoid mixing IP families (for example, `192.168.0.x` and `192.168.1.x`) in the same DNS setup
 - do not assume the K3s node IP is the ingress IP unless the cluster has no external IP assigned
@@ -118,10 +124,10 @@ This is the pickup from the most recent troubleshooting cycle:
 ### MetalLB setup
 
 ```bash
-METALLB_IP_POOL=192.168.0.2-192.168.0.253 ./scripts/install-metallb.sh
+METALLB_IP_POOL=192.168.0.6-192.168.0.6 ./scripts/install-metallb.sh
 ```
 
-This is now the default in the repo configuration and should match the router’s active LAN pool.
+This is the active repo default and keeps the ingress IP stable across cluster restarts.
 
 ## Prerequisites
 
@@ -169,11 +175,13 @@ kubectl get ingress -n homelab
 | Service | URL | Notes |
 | --- | --- | --- |
 | Homepage dashboard | `http://dashboard.homelab.home.arpa` | ingress-backed UI |
+| Project README | `https://github.com/SushritPasupuleti/homelab/blob/main/README.md` | repo documentation |
+| Unsloth API | `http://unsloth.homelab.home.arpa` | primary OpenAI-compatible model API |
+| Unsloth Studio | `http://unsloth-studio.homelab.home.arpa` | local web interface for the Unsloth stack |
 | Open WebUI | `http://open-webui.homelab.home.arpa` | chat UI and model management |
 | OpenSERP | `http://openserp.homelab.home.arpa` | search backend |
 | Hermes | `http://hermes.homelab.home.arpa` | gateway endpoint |
 | Hermes dashboard | `http://hermes-dashboard.homelab.home.arpa` | dashboard UI |
-| Ollama | `http://ollama.homelab.home.arpa` | local model API |
 | Portainer | `http://portainer.homelab.home.arpa` | container admin |
 | Home Assistant | `http://homeassistant.homelab.home.arpa` | smart-home automation |
 | Grafana | `http://grafana.homelab.home.arpa` | metrics visualisation |

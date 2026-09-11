@@ -25,8 +25,10 @@ spec:
           env:
             - name: WEBUI_URL
               value: "http://open-webui.homelab.home.arpa"
-            - name: OLLAMA_BASE_URL
-              value: "http://ollama.homelab.svc.cluster.local:11434"
+            - name: OPENAI_API_BASE_URL
+              value: "http://unsloth.homelab.svc.cluster.local:8000/v1"
+            - name: OPENAI_API_KEY
+              value: "${UNSLOTH_API_KEY}"
             - name: ENABLE_WEB_SEARCH
               value: "True"
             - name: WEB_SEARCH_ENGINE
