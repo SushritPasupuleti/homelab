@@ -33,6 +33,16 @@ spec:
               value: "1"
             - name: UNSLOTH_CPU_THREADS
               value: "8"
+            - name: UNSLOTH_KV_CACHE_HOST
+              value: "${UNSLOTH_KV_CACHE_HOST}"
+            - name: UNSLOTH_KV_CACHE_PORT
+              value: "${UNSLOTH_KV_CACHE_PORT}"
+            - name: UNSLOTH_KV_CACHE_PASSWORD
+              value: "${UNSLOTH_KV_CACHE_PASSWORD}"
+            - name: OPENAI_API_BASE_URL
+              value: "http://ollama.homelab.svc.cluster.local:11434/v1"
+            - name: OPENAI_API_KEY
+              value: "ollama"
             - name: CUDA_VISIBLE_DEVICES
               value: "${UNSLOTH_NVIDIA_VISIBLE_DEVICES}"
             - name: NVIDIA_VISIBLE_DEVICES
@@ -58,6 +68,8 @@ spec:
           volumeMounts:
             - name: unsloth-data
               mountPath: /workspace
+            - name: model-store
+              mountPath: /models
           resources:
             requests:
               cpu: 500m
@@ -71,6 +83,9 @@ spec:
         - name: unsloth-data
           persistentVolumeClaim:
             claimName: unsloth-data
+        - name: model-store
+          persistentVolumeClaim:
+            claimName: model-store
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

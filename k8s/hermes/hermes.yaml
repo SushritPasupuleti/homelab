@@ -29,10 +29,10 @@ spec:
 
               cat > /opt/data/config.yaml <<'EOF'
               model:
-                provider: custom
+                provider: openai
                 model: ${UNSLOTH_MODEL}
-                base_url: http://unsloth.homelab.svc.cluster.local:8000/v1
-                api_key: ${UNSLOTH_API_KEY}
+                base_url: http://ollama.homelab.svc.cluster.local:11434/v1
+                api_key: ollama
 
               plugins:
                 - web-ddgs

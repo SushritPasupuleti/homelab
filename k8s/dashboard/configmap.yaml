@@ -63,6 +63,8 @@ data:
                     url: http://unsloth.homelab.home.arpa
                   - title: Unsloth Studio
                     url: http://unsloth-studio.homelab.home.arpa
+                  - title: Ollama API
+                    url: http://ollama.homelab.home.arpa
                   - title: Open WebUI
                     url: http://open-webui.homelab.home.arpa
                   - title: Hermes
@@ -113,6 +115,8 @@ data:
                         url: http://unsloth.homelab.home.arpa
                       - title: Unsloth Studio
                         url: http://unsloth-studio.homelab.home.arpa
+                      - title: Ollama API
+                        url: http://ollama.homelab.home.arpa
 
           - size: full
             widgets:
@@ -189,6 +193,8 @@ data:
                     url: http://unsloth.homelab.home.arpa
                   - title: Unsloth Studio
                     url: http://unsloth-studio.homelab.home.arpa
+                  - title: Ollama API
+                    url: http://ollama.homelab.home.arpa
                   - title: OpenSERP
                     url: http://openserp.homelab.home.arpa/docs
                   - title: Hermes Dashboard
@@ -249,6 +255,14 @@ data:
                     url: http://portainer.homelab.home.arpa
                   - title: Open WebUI
                     url: http://open-webui.homelab.home.arpa
+                  - title: Ollama API
+                    url: http://ollama.homelab.home.arpa
+                  - title: Hermes Dashboard
+                    url: http://hermes-dashboard.homelab.home.arpa
+                  - title: Unsloth API
+                    url: http://unsloth.homelab.home.arpa
+                  - title: Unsloth Studio
+                    url: http://unsloth-studio.homelab.home.arpa
 
               - type: bookmarks
                 title: Monitoring quick links
@@ -263,6 +277,18 @@ data:
                         url: http://openserp.homelab.home.arpa/docs
                       - title: Dashboard
                         url: http://dashboard.homelab.home.arpa
+                  - title: AI services
+                    links:
+                      - title: Ollama API
+                        url: http://ollama.homelab.home.arpa
+                      - title: Open WebUI
+                        url: http://open-webui.homelab.home.arpa
+                      - title: Hermes Dashboard
+                        url: http://hermes-dashboard.homelab.home.arpa
+                      - title: Unsloth API
+                        url: http://unsloth.homelab.home.arpa
+                      - title: Unsloth Studio
+                        url: http://unsloth-studio.homelab.home.arpa
 
           - size: full
             widgets:
@@ -270,6 +296,72 @@ data:
                 title: Homelab dashboard
                 source: http://grafana.homelab.home.arpa/d/home/homelab-overview?orgId=1&theme=dark&kiosk
                 height: 860
+
+              - type: custom-api
+                title: Ollama API status
+                cache: 15s
+                url: http://ollama.homelab.svc.cluster.local:11434/api/tags
+                template: |
+                  {{ if .JSON }}
+                  <div class="size-h1 color-primary">{{ len .JSON.Get "models" }}</div>
+                  <div class="color-subtle">loaded models</div>
+                  {{ else }}
+                  <div class="size-h1 color-negative">ERR</div>
+                  <div class="color-subtle">ollama offline</div>
+                  {{ end }}
+
+              - type: custom-api
+                title: Ollama runtime
+                cache: 15s
+                url: http://ollama.homelab.svc.cluster.local:11434/api/ps
+                template: |
+                  {{ $items := .JSON.Get "models" }}
+                  {{ if $items }}
+                  <div class="size-h1 color-primary">GPU</div>
+                  <div class="color-subtle">active</div>
+                  {{ else }}
+                  <div class="size-h1 color-subtle">CPU</div>
+                  <div class="color-subtle">idle</div>
+                  {{ end }}
+
+              - type: custom-api
+                title: Open WebUI status
+                cache: 15s
+                url: http://open-webui.homelab.svc.cluster.local/
+                template: |
+                  {{ if .JSON }}
+                  <div class="size-h1 color-primary">OK</div>
+                  <div class="color-subtle">webui reachable</div>
+                  {{ else }}
+                  <div class="size-h1 color-negative">ERR</div>
+                  <div class="color-subtle">webui offline</div>
+                  {{ end }}
+
+              - type: custom-api
+                title: Hermes status
+                cache: 15s
+                url: http://hermes.homelab.svc.cluster.local:9119/
+                template: |
+                  {{ if .JSON }}
+                  <div class="size-h1 color-primary">OK</div>
+                  <div class="color-subtle">gateway online</div>
+                  {{ else }}
+                  <div class="size-h1 color-negative">ERR</div>
+                  <div class="color-subtle">gateway offline</div>
+                  {{ end }}
+
+              - type: custom-api
+                title: Unsloth status
+                cache: 15s
+                url: http://unsloth.homelab.svc.cluster.local:8000/api/health
+                template: |
+                  {{ if .JSON }}
+                  <div class="size-h1 color-primary">OK</div>
+                  <div class="color-subtle">api healthy</div>
+                  {{ else }}
+                  <div class="size-h1 color-negative">ERR</div>
+                  <div class="color-subtle">api unavailable</div>
+                  {{ end }}
 
               - type: custom-api
                 title: Prometheus target health

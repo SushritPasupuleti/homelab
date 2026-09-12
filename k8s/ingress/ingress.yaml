@@ -36,6 +36,16 @@ spec:
                 name: open-webui
                 port:
                   number: 80
+    - host: ollama.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ollama
+                port:
+                  number: 11434
     - host: openserp.homelab.home.arpa
       http:
         paths:
@@ -84,6 +94,16 @@ spec:
             backend:
               service:
                 name: unsloth
+                port:
+                  number: 8000
+    - host: vllm.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vllm
                 port:
                   number: 8000
     - host: portainer.homelab.home.arpa

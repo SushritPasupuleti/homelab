@@ -6,7 +6,7 @@ NAMESPACE="${NAMESPACE:-homelab}"
 kubectl delete namespace "$NAMESPACE" --ignore-not-found=true
 
 echo "Deleted namespace: $NAMESPACE"
-echo "If you also want to remove MetalLB, run: kubectl delete -f https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml"
+echo "Ingress is host-bound, so no MetalLB cleanup is required for this stack."
 
 # check and delete all PVCs in the namespace
 echo "Checking for PVCs in namespace: $NAMESPACE"

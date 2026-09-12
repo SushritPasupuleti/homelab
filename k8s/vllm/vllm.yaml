@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm
+  namespace: homelab
+  labels:
+    app: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm
+  template:
+    metadata:
+      labels:
+        app: vllm
+    spec:
+      runtimeClassName: ${VLLM_RUNTIME_CLASS}
+      containers:
+        - name: vllm
+          image: ${VLLM_IMAGE}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              exec python3 -m vllm.entrypoints.openai.api_server \
+                --host 0.0.0.0 \
+                --port 8000 \
+                --model "${VLLM_MODEL_PATH}" \
+                ${VLLM_EXTRA_ARGS}
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: VLLM_MODEL_PATH
+              value: "${VLLM_MODEL_PATH}"
+            - name: VLLM_EXTRA_ARGS
+              value: "${VLLM_EXTRA_ARGS}"
+            - name: HF_HOME
+              value: "/workspace/.cache/huggingface"
+            - name: HUGGINGFACE_HUB_CACHE
+              value: "/workspace/.cache/huggingface/hub"
+            - name: CUDA_VISIBLE_DEVICES
+              value: "${VLLM_NVIDIA_VISIBLE_DEVICES}"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "${VLLM_NVIDIA_VISIBLE_DEVICES}"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "${VLLM_NVIDIA_DRIVER_CAPABILITIES}"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          volumeMounts:
+            - name: unsloth-data
+              mountPath: /workspace
+            - name: model-store
+              mountPath: /models
+          resources:
+            requests:
+              cpu: 500m
+              memory: 4Gi
+              ${VLLM_GPU_REQUEST_KEY}
+            limits:
+              cpu: 8
+              memory: 24Gi
+              ${VLLM_GPU_LIMIT_KEY}
+      volumes:
+        - name: unsloth-data
+          persistentVolumeClaim:
+            claimName: unsloth-data
+        - name: model-store
+          persistentVolumeClaim:
+            claimName: model-store
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-store
+  namespace: homelab
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm
+  namespace: homelab
+  labels:
+    app: vllm
+spec:
+  selector:
+    app: vllm
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP

@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+STATIC_INGRESS_IP="${STABLE_INGRESS_IP:-${INGRESS_IP:-192.168.0.6}}"
 if [[ -n "${INGRESS_IP:-}" ]]; then
   RESOLVED_IP="${INGRESS_IP}"
-else
-  if kubectl get ingress -n homelab homelab-ingress >/dev/null 2>&1; then
-    RESOLVED_IP="$(kubectl get ingress -n homelab homelab-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
-  fi
+elif kubectl get ingress -n homelab homelab-ingress >/dev/null 2>&1; then
+  RESOLVED_IP="$(kubectl get ingress -n homelab homelab-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
 
   if [[ -z "${RESOLVED_IP}" ]]; then
     RESOLVED_IP="$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
   fi
 
   if [[ -z "${RESOLVED_IP}" ]]; then
-    echo "Could not determine the ingress IP automatically. Set INGRESS_IP explicitly." >&2
-    exit 1
+    RESOLVED_IP="${STATIC_INGRESS_IP}"
+    echo "Ingress LoadBalancer IP not assigned yet; falling back to the pinned static ingress IP ${RESOLVED_IP}." >&2
   fi
+else
+  RESOLVED_IP="${STATIC_INGRESS_IP}"
+  echo "Kubernetes is not reachable or the ingress is not up yet; falling back to the pinned static ingress IP ${RESOLVED_IP}." >&2
 fi
 
 cat <<EOF

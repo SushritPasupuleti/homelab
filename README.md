@@ -7,28 +7,34 @@ This repository provisions a Kubernetes-based homelab for AI, automation, media,
 ```mermaid
 flowchart LR
     User[LAN clients / browsers / devices] --> DNS[AdGuard Home or local DNS]
-    DNS --> Ingress[Ingress NGINX / fixed MetalLB IP]
+    DNS --> Ingress[Ingress NGINX / host IP]
     Ingress --> Dashboard[Homepage dashboard]
     Ingress --> WebUI[Open WebUI]
     Ingress --> UnslothAPI[Unsloth API]
     Ingress --> UnslothStudio[Unsloth Studio]
+    Ingress --> Ollama[Ollama model server]
     Ingress --> Hermes[Hermes gateway + dashboard]
     Ingress --> HA[Home Assistant]
     Ingress --> Media[Jellyfin / Plex / FileBrowser]
     Ingress --> Apps[Stock-EZ / Portainer / Grafana / Prometheus]
 
-    WebUI --> UnslothAPI
-    UnslothStudio --> UnslothAPI
+    WebUI --> Ollama
+    UnslothStudio --> SharedModel[Shared models PVC /workspace]
+    SharedModel --> Ollama
     Hermes --> OpenSERP[OpenSERP / search backend]
     WebUI --> OpenSERP
     UnslothAPI --> GPU[NVIDIA GPU if available]
+    Ollama --> GPU
+    vLLM[vLLM opt-in GPU mode] -. optional .-> GPU
     Apps --> K8s[Kubernetes cluster services]
 ```
 
 ## Included services
 
 - Stock-EZ for app workloads and internal reporting
-- Unsloth API and Studio as the primary local AI stack
+- Unsloth API and Studio as the local AI editing and experimentation layer
+- Ollama as the default GPU-backed model-serving layer for local inference
+- vLLM kept as an opt-in, GPU-specific serving path when you want a dedicated OpenAI-compatible server
 - Open WebUI for browser-based chat and model access
 - OpenSERP as the local search backend used by Hermes and related AI tooling
 - Hermes as a standalone agent gateway and dashboard
@@ -45,7 +51,7 @@ flowchart LR
 1. Use a single ingress entrypoint for LAN hostnames.
 2. Prefer LAN DNS (for example AdGuard Home) over ad hoc /etc/hosts overrides.
 3. Keep inter-service communication inside the Kubernetes cluster via service DNS names.
-4. Pin the MetalLB ingress IP so the entrypoint stays stable across restarts and reboots.
+4. Default to the node/host IP for ingress so the stack stays independent of a separate load-balancer service.
 5. Keep public-facing URLs stable and intentionally namespaced under `.homelab.home.arpa`.
 6. Treat DNS and ingress as a first-class part of the stack; 404s are often a routing or hostname issue rather than an app issue.
 
@@ -56,6 +62,7 @@ The stack is intended to be reachable through hostnames such as:
 - `dashboard.homelab.home.arpa`
 - `unsloth.homelab.home.arpa`
 - `unsloth-studio.homelab.home.arpa`
+- `ollama.homelab.home.arpa`
 - `open-webui.homelab.home.arpa`
 - `openserp.homelab.home.arpa`
 - `hermes.homelab.home.arpa`
@@ -66,19 +73,20 @@ The stack is intended to be reachable through hostnames such as:
 
 ### Preferred setup
 
-Use a DNS server on the LAN, ideally AdGuard Home, as the authoritative source for those hostnames. Put the ingress IP there rather than a node IP or stale value.
+Use a DNS server on the LAN, ideally AdGuard Home, as the authoritative source for those hostnames. Point the DNS entries at the host machine's LAN IP instead of a separate ingress pool.
 
-The active ingress is pinned to `192.168.0.6` in this repo and should remain stable across restarts.
+For the default host-IP mode, use the machine's actual LAN address (for example `192.168.0.79`) and keep it consistent in your LAN DNS.
 
 Example:
 
 ```text
-dashboard.homelab.home.arpa      -> 192.168.0.6
-unsloth.homelab.home.arpa        -> 192.168.0.6
-unsloth-studio.homelab.home.arpa -> 192.168.0.6
-open-webui.homelab.home.arpa     -> 192.168.0.6
-openserp.homelab.home.arpa       -> 192.168.0.6
-hermes.homelab.home.arpa         -> 192.168.0.6
+dashboard.homelab.home.arpa      -> 192.168.0.79
+unsloth.homelab.home.arpa        -> 192.168.0.79
+unsloth-studio.homelab.home.arpa -> 192.168.0.79
+open-webui.homelab.home.arpa     -> 192.168.0.79
+ollama.homelab.home.arpa         -> 192.168.0.79
+openserp.homelab.home.arpa       -> 192.168.0.79
+hermes.homelab.home.arpa         -> 192.168.0.79
 ```
 
 ### Fallback setup
@@ -86,7 +94,7 @@ hermes.homelab.home.arpa         -> 192.168.0.6
 If there is no LAN DNS server, use a host override on the client. This is fine for a lab but should not be treated as the network-wide solution.
 
 ```bash
-sudo sh -c 'echo "192.168.0.6 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa open-webui.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa" >> /etc/hosts'
+sudo sh -c 'echo "192.168.0.79 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa open-webui.homelab.home.arpa ollama.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa" >> /etc/hosts'
 ```
 
 The helper script in this repo can generate a host-file style entry. It prefers the ingress IP when it can detect one, and falls back to the node IP only when needed.
@@ -101,7 +109,7 @@ On NixOS, prefer `networking.extraHosts` or your own Nix-managed DNS config inst
 
 ```nix
 networking.extraHosts = ''
-  192.168.0.6 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa open-webui.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa
+  192.168.0.79 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa open-webui.homelab.home.arpa ollama.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa
 '';
 ```
 
@@ -115,19 +123,19 @@ sudo nixos-rebuild switch
 
 This is the pickup from the most recent troubleshooting cycle:
 
-- keep the router DHCP/LAN range and MetalLB pool aligned
-- pin the MetalLB pool to a static ingress IP in the active LAN subnet, for example `192.168.0.6-192.168.0.6`
+- keep the router DHCP/LAN range and the host LAN IP aligned to the same subnet
+- use the machine's actual LAN address for the ingress (`192.168.0.6` in this example)
 - use AdGuard Home or another LAN DNS server as the canonical resolver for `*.homelab.home.arpa`
 - avoid mixing IP families (for example, `192.168.0.x` and `192.168.1.x`) in the same DNS setup
-- do not assume the K3s node IP is the ingress IP unless the cluster has no external IP assigned
+- do not assume the K3s node IP is the ingress IP unless the cluster is intentionally exposing that address
 
-### MetalLB setup
+### Host-IP ingress setup
 
 ```bash
-METALLB_IP_POOL=192.168.0.6-192.168.0.6 ./scripts/install-metallb.sh
+HOST_IP=192.168.0.6 ./scripts/install-ingress-nginx.sh
 ```
 
-This is the active repo default and keeps the ingress IP stable across cluster restarts.
+The ingress now follows the system host IP by default, so no separate load-balancer pool is required.
 
 ## Prerequisites
 
@@ -136,33 +144,136 @@ Before running the stack, verify the following:
 - a working `k3s` or Kubernetes cluster is running
 - `kubectl` is configured and points at the correct cluster
 - ingress-nginx is installed
-- MetalLB is configured if you want an ingress IP on the LAN
+- the host machine's LAN IP is stable and DNS points at it
 - your router or DNS appliance is not serving stale host records for the `homelab.home.arpa` zone
 - the LAN nodes can reach the cluster node and ingress IPs
+
+## Script reference and detailed usage
+
+The repository includes a small set of operational scripts that coordinate cluster state, GPU gating, and local credential handling.
+
+### `./scripts/deploy.sh`
+
+Purpose: bootstrap or fully reapply the entire stack.
+
+What it does:
+- verifies `kubectl` and cluster reachability
+- loads the local secret file if present
+- resolves service hostnames, image tags, and credentials
+- identifies whether NVIDIA is visible to the host and Kubernetes
+- decides which service should own GPU access (`auto`, `ollama`, `unsloth`, `vllm`, `none`)
+- templated renders all manifests from the `k8s/` directory and applies them with `kubectl`
+- writes the local secret file used for admin and app credentials
+
+Common examples:
+
+```bash
+./scripts/deploy.sh
+GPU_SERVICE=vllm ./scripts/deploy.sh
+GPU_SERVICE=none ./scripts/deploy.sh
+```
+
+The GPU selector defaults to Ollama as the primary GPU-backed serving layer, while vLLM is intentionally opt-in unless you explicitly override it. Unsloth defaults to CPU unless specific environment overrides are set.
+
+### `./scripts/update.sh`
+
+Purpose: re-run the deployment templating and apply updates without a full teardown.
+
+What it does:
+- performs the same runtime and GPU validation as `deploy.sh`
+- refreshes manifests after changes to the stack
+- re-applies `k8s/` resources without reinitializing the entire cluster state
+- is useful when you change hostnames, image versions, or GPU policy
+
+Common examples:
+
+```bash
+./scripts/update.sh
+GPU_SERVICE=vllm ./scripts/update.sh
+GPU_SERVICE=unsloth ./scripts/update.sh
+```
+
+For most lab setups, keep the default at `GPU_SERVICE=ollama` and only opt back into vLLM when you specifically want a dedicated OpenAI-compatible server.
+
+### `./scripts/relaunch-vllm.sh`
+
+Purpose: restart or refresh the dedicated vLLM deployment with a specific model and argument set.
+
+Important limitation: this repo uses the default `local-path` storage class in Kubernetes. `local-path` does not support `ReadWriteMany` for the shared model PVC, and `kubectl describe pvc model-store` will show provisioning failures if you request an RWX volume. The supported mode here is `ReadWriteOnce`, which means the model store can be mounted by a single pod at a time on a single node. If you need true concurrent multi-pod sharing, use a cluster storage backend such as Longhorn, Ceph, NFS, or a proper shared filesystem.
+
+What it does:
+- reads the `k8s/vllm/vllm.yaml` template
+- injects `VLLM_MODEL_PATH`, `VLLM_EXTRA_ARGS`, and GPU-related env values
+- detects whether Kubernetes is currently exposing `nvidia.com/gpu`
+- falls back to CPU-safe settings if GPU capacity is unavailable
+- rolls the deployment and waits for readiness
+
+Common examples:
+
+```bash
+./scripts/relaunch-vllm.sh
+VLLM_MODEL_NAME=qwen3-27b VLLM_EXTRA_ARGS="--gpu-memory-utilization 0.9 --max-model-len 16384" ./scripts/relaunch-vllm.sh
+VLLM_MODEL_PATH=/models/custom-model VLLM_EXTRA_ARGS="--tensor-parallel-size 1 --max-model-len 4096" ./scripts/relaunch-vllm.sh
+```
+
+### `./scripts/reset-unsloth-password.sh`
+
+Purpose: rotate the local Unsloth Studio password and persist it in the gitignored credentials file.
+
+What it does:
+- executes the Unsloth Studio password reset command inside the running pod
+- parses the new password from the command output
+- updates `.homelab-secrets.env` with the current username and password
+
+Common example:
+
+```bash
+./scripts/reset-unsloth-password.sh
+```
+
+### `./scripts/setup-nvidia.sh`
+
+Purpose: configure the host-side NVIDIA runtime prerequisites for containerd or Docker.
+
+This script is intended to help you repair the host environment when the node is present but no `nvidia.com/gpu` capacity is exposed to Kubernetes.
+
+### `./scripts/load-local-image.sh`
+
+Purpose: load a locally built or locally cached image into the cluster runtime.
+
+Useful when iterating on a custom container image without pushing it to a registry.
+
+### `./scripts/update-hosts.sh`
+
+Purpose: update local client host entries for the homelab domains, especially for LAN clients without local DNS.
+
+### `./scripts/install-ingress-nginx.sh`
+
+Purpose: bootstrap ingress in host-IP mode so the homelab hostnames resolve to the machine's actual LAN address.
+
+### `./scripts/delete-homelab.sh`
+
+Purpose: remove the namespace and stack resources.
+
+Use with caution: this is destructive and should only be used when intentionally tearing down the lab.
 
 ## Quick start
 
 1. Review and adjust `.env` or `.env.example`.
-2. Install ingress-nginx if it is not already present:
+2. Install ingress-nginx in host-IP mode if it is not already present:
 
 ```bash
-./scripts/install-ingress-nginx.sh
+HOST_IP=192.168.0.6 ./scripts/install-ingress-nginx.sh
 ```
 
-3. Install or update MetalLB to match your LAN subnet:
-
-```bash
-METALLB_IP_POOL=192.168.0.2-192.168.0.253 ./scripts/install-metallb.sh
-```
-
-4. Deploy the stack:
+3. Deploy the stack:
 
 ```bash
 chmod +x scripts/*.sh
 ./scripts/deploy.sh
 ```
 
-5. Validate the resources:
+4. Validate the resources:
 
 ```bash
 kubectl get pods -n homelab
@@ -221,7 +332,7 @@ If the host resolves to a stale IP, fix the LAN DNS record or local host entry.
 
 Check whether the hostname points to an old `192.168.1.x` address while the router is on `192.168.0.x`.
 
-This is a common problem when DHCP, MetalLB, and AdGuard are changed independently.
+This is a common problem when DHCP and AdGuard are changed independently.
 
 ### 3. Services do not respond on their hostnames
 
@@ -269,10 +380,10 @@ Also check the relevant config files and env values to ensure they reference the
 
 - Keep `.env` and `.env.example` aligned with the actual deployment targets.
 - Prefer ingress hostnames over raw node IPs for all user-facing services.
-- Keep a single source of truth for the router/LAN subnet and MetalLB pool.
+- Keep a single source of truth for the router/LAN subnet and the host machine IP.
 - Do not leave stale `192.168.1.x` host entries in DNS while the router is on `192.168.0.x`.
 - Treat AdGuard as the network-wide DNS authority; use `/etc/hosts` only for debugging or single-client overrides.
-- Verify ingress, MetalLB, and DNS in the same pass whenever a LAN change happens.
+- Verify ingress and DNS together whenever a LAN change happens.
 - Keep service-to-service communication inside the cluster; do not hardcode external IPs into config when a service name will do.
 - Check the ingress first when a hostname returns a 404; often the app is healthy and the route is wrong.
 
