@@ -1,0 +1,5 @@
+- Add Terminal to execute commands from (scripts folder contents etc)
+    - also add vscode-server
+    - wire ollama and other llm provider services to all of them
+- Repair file browser service - shows 503
+- add charm-cli based TUI to configure/deploy services

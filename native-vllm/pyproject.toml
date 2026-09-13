@@ -1,0 +1,19 @@
+[project]
+name = "homelab-native-vllm"
+version = "0.1.0"
+description = "Standalone native vLLM runtime for the homelab stack"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "vllm>=0.7.0",
+]
+
+[project.scripts]
+homelab-native-vllm = "native_vllm:main"
+
+[tool.uv]
+package = false
+
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"

@@ -17,6 +17,7 @@ flowchart LR
     Ingress --> HA[Home Assistant]
     Ingress --> Media[Jellyfin / Plex / FileBrowser]
     Ingress --> Apps[Stock-EZ / Portainer / Grafana / Prometheus]
+    Ingress --> NativeVLLM[Native vLLM on bare metal]
 
     WebUI --> Ollama
     UnslothStudio --> SharedModel[Shared models PVC /workspace]
@@ -25,7 +26,8 @@ flowchart LR
     WebUI --> OpenSERP
     UnslothAPI --> GPU[NVIDIA GPU if available]
     Ollama --> GPU
-    vLLM[vLLM opt-in GPU mode] -. optional .-> GPU
+    NativeVLLM --> GPU
+    vLLM[vLLM in-cluster opt-in] -. optional .-> GPU
     Apps --> K8s[Kubernetes cluster services]
 ```
 
@@ -63,6 +65,12 @@ The stack is intended to be reachable through hostnames such as:
 - `unsloth.homelab.home.arpa`
 - `unsloth-studio.homelab.home.arpa`
 - `ollama.homelab.home.arpa`
+- `vllm-native.homelab.home.arpa` (bare-metal vLLM service)
+- `native-vllm.homelab.home.arpa` (alias)
+- `llama-server.homelab.home.arpa` (bare-metal llama.cpp GGUF service)
+- `llama-server-native.homelab.home.arpa` (alias)
+- `llama-server.homelab.home.arpa` (bare-metal llama.cpp GGUF service)
+- `llama-server-native.homelab.home.arpa` (alias)
 - `open-webui.homelab.home.arpa`
 - `openserp.homelab.home.arpa`
 - `hermes.homelab.home.arpa`
@@ -94,7 +102,7 @@ hermes.homelab.home.arpa         -> 192.168.0.79
 If there is no LAN DNS server, use a host override on the client. This is fine for a lab but should not be treated as the network-wide solution.
 
 ```bash
-sudo sh -c 'echo "192.168.0.79 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa open-webui.homelab.home.arpa ollama.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa" >> /etc/hosts'
+sudo sh -c 'echo "192.168.0.79 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa vllm-native.homelab.home.arpa native-vllm.homelab.home.arpa open-webui.homelab.home.arpa ollama.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa" >> /etc/hosts'
 ```
 
 The helper script in this repo can generate a host-file style entry. It prefers the ingress IP when it can detect one, and falls back to the node IP only when needed.
@@ -103,13 +111,35 @@ The helper script in this repo can generate a host-file style entry. It prefers 
 sudo ./scripts/update-hosts.sh
 ```
 
+### Shared model cache for native services and model tooling
+
+The stack now uses a single repo-local Hugging Face cache at `.cache/huggingface` as the shared model store for native inference and model prep workloads:
+
+- native vLLM reads and writes through `HOMELAB_HF_CACHE`
+- llama.cpp uses the same environment variables and points at the same cache directory
+- Ollama is configured to use `/root/.cache/huggingface` and mounts the repo-root cache via `hostPath`
+- Unsloth is configured to use `/root/.cache/huggingface` as well and mounts the same repo-root cache into the container
+
+This keeps all model downloads and cache reuse consistent across the host and the cluster. The current working directory is expected to be the repo root, and the shared directory is:
+
+```bash
+/home/sushrit_lawliet/code/homelab/.cache/huggingface
+```
+
+To pre-download a model into the shared cache from the host:
+
+```bash
+cd /home/sushrit_lawliet/code/homelab
+uv run --with huggingface_hub python download_hf_model.py unsloth/gemma-4-E2B-it --cache-dir .cache/huggingface
+```
+
 ### NixOS-specific instructions
 
 On NixOS, prefer `networking.extraHosts` or your own Nix-managed DNS config instead of editing `/etc/hosts` directly.
 
 ```nix
 networking.extraHosts = ''
-  192.168.0.79 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa open-webui.homelab.home.arpa ollama.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa
+  192.168.0.79 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa vllm-native.homelab.home.arpa native-vllm.homelab.home.arpa open-webui.homelab.home.arpa ollama.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa
 '';
 ```
 
@@ -118,6 +148,31 @@ Then rebuild:
 ```bash
 sudo nixos-rebuild switch
 ```
+
+### NixOS vLLM/Triton `ldconfig` compatibility fix
+
+If you run the native vLLM service from a Nix shell and see startup failures like:
+
+```text
+FileNotFoundError: [Errno 2] No such file or directory: '/sbin/ldconfig'
+```
+
+then the host is missing the NixOS compatibility symlink that Triton expects.
+
+This machine has the real binary at:
+
+```bash
+/run/current-system/sw/bin/ldconfig
+```
+
+but the runtime hard-codes `/sbin/ldconfig`, so create the alias once as root:
+
+```bash
+sudo mkdir -p /sbin
+sudo ln -sf /run/current-system/sw/bin/ldconfig /sbin/ldconfig
+```
+
+The project shell hooks in the CUDA shells attempt to create this automatically when launched as root, but a normal user shell will only print a warning and let the process continue. This is intentional: only root can create `/sbin` on a typical NixOS system.
 
 ## Recommended LAN networking
 
@@ -195,6 +250,41 @@ GPU_SERVICE=unsloth ./scripts/update.sh
 
 For most lab setups, keep the default at `GPU_SERVICE=ollama` and only opt back into vLLM when you specifically want a dedicated OpenAI-compatible server.
 
+### Native bare-metal vLLM
+
+The stack supports an explicit bare-metal vLLM runtime that sits outside Kubernetes and is served from the host itself. This is the recommended pattern when you want to keep the cluster default at Ollama but still run a dedicated OpenAI-compatible server for local or lab use.
+
+Typical layout:
+
+- venv lives in `.venvs/vllm` under the repo root
+- launcher lives in `scripts/run-native-vllm.sh`
+- systemd unit lives in `scripts/vllm-native.service`
+- the host service is exposed on the LAN at `http://192.168.0.6:8000` (or your host LAN IP)
+- ingress exposes the same service under `vllm-native.homelab.home.arpa` and `native-vllm.homelab.home.arpa`
+
+Setup flow:
+
+The native vLLM environment uses uv to create the virtual environment and install dependencies, so it stays consistent with the project’s preferred Python tooling.
+
+```bash
+./scripts/setup-native-vllm.sh
+sudo cp ./scripts/vllm-native.service /etc/systemd/system/vllm-native.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now vllm-native.service
+```
+
+Environment overrides:
+
+```bash
+VLLM_PORT=8000 \
+VLLM_HOST=0.0.0.0 \
+VLLM_MODEL_PATH=/path/to/model \
+VLLM_EXTRA_ARGS="--gpu-memory-utilization 0.9 --max-model-len 16384" \
+./scripts/run-native-vllm.sh
+```
+
+If the host has an NVIDIA GPU, the script enables the GPU path automatically. When no GPU is present, it falls back to the CPU path rather than aborting.
+
 ### `./scripts/relaunch-vllm.sh`
 
 Purpose: restart or refresh the dedicated vLLM deployment with a specific model and argument set.
@@ -215,6 +305,8 @@ Common examples:
 VLLM_MODEL_NAME=qwen3-27b VLLM_EXTRA_ARGS="--gpu-memory-utilization 0.9 --max-model-len 16384" ./scripts/relaunch-vllm.sh
 VLLM_MODEL_PATH=/models/custom-model VLLM_EXTRA_ARGS="--tensor-parallel-size 1 --max-model-len 4096" ./scripts/relaunch-vllm.sh
 ```
+
+The in-cluster vLLM deployment remains a secondary option; the native host service is the primary option when you need a dedicated external model endpoint.
 
 ### `./scripts/reset-unsloth-password.sh`
 

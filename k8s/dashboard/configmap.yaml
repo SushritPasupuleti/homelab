@@ -195,6 +195,8 @@ data:
                     url: http://unsloth-studio.homelab.home.arpa
                   - title: Ollama API
                     url: http://ollama.homelab.home.arpa
+                  - title: Native vLLM
+                    url: http://vllm-native.homelab.home.arpa
                   - title: OpenSERP
                     url: http://openserp.homelab.home.arpa/docs
                   - title: Hermes Dashboard

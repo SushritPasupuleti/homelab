@@ -1,0 +1,17 @@
+[project]
+name = "homelab-native-llama-server"
+version = "0.1.0"
+description = "Standalone native llama.cpp server for the homelab stack"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = []
+
+[project.scripts]
+homelab-native-llama-server = "llama_server:main"
+
+[tool.uv]
+package = false
+
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"

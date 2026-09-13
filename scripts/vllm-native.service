@@ -1,0 +1,19 @@
+[Unit]
+Description=vLLM Native Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/sushrit_lawliet/code/homelab
+Environment=VLLM_VENV_DIR=/home/sushrit_lawliet/code/homelab/.venvs/vllm
+Environment=VLLM_MODEL_PATH=/home/sushrit_lawliet/.cache/huggingface/hub
+Environment=VLLM_PORT=8000
+Environment=VLLM_HOST=0.0.0.0
+Environment=VLLM_EXTRA_ARGS=
+ExecStart=/home/sushrit_lawliet/code/homelab/scripts/run-native-vllm.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

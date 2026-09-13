@@ -39,8 +39,24 @@ spec:
               value: "${UNSLOTH_KV_CACHE_PORT}"
             - name: UNSLOTH_KV_CACHE_PASSWORD
               value: "${UNSLOTH_KV_CACHE_PASSWORD}"
+            - name: HOMELAB_HF_CACHE
+              value: "/root/.cache/huggingface"
+            - name: HF_HOME
+              value: "/root/.cache/huggingface"
+            - name: HUGGINGFACE_HUB_CACHE
+              value: "/root/.cache/huggingface"
+            - name: TRANSFORMERS_CACHE
+              value: "/root/.cache/huggingface"
+            - name: HF_DATASETS_CACHE
+              value: "/root/.cache/huggingface"
             - name: OPENAI_API_BASE_URL
-              value: "http://ollama.homelab.svc.cluster.local:11434/v1"
+              value: "http://llama-server.homelab.svc.cluster.local:8001/v1"
+            - name: LLAMA_SERVER_BASE_URL
+              value: "http://llama-server.homelab.svc.cluster.local:8001/v1"
+            - name: VLLM_API_BASE_URL
+              value: "http://vllm.homelab.svc.cluster.local:8000/v1"
+            - name: VLLM_BASE_URL
+              value: "http://vllm.homelab.svc.cluster.local:8000/v1"
             - name: OPENAI_API_KEY
               value: "ollama"
             - name: CUDA_VISIBLE_DEVICES
@@ -68,6 +84,8 @@ spec:
           volumeMounts:
             - name: unsloth-data
               mountPath: /workspace
+            - name: homelab-hf-cache
+              mountPath: /root/.cache/huggingface
             - name: model-store
               mountPath: /models
           resources:
@@ -83,6 +101,10 @@ spec:
         - name: unsloth-data
           persistentVolumeClaim:
             claimName: unsloth-data
+        - name: homelab-hf-cache
+          hostPath:
+            path: /home/sushrit_lawliet/code/homelab/.cache/huggingface
+            type: DirectoryOrCreate
         - name: model-store
           persistentVolumeClaim:
             claimName: model-store

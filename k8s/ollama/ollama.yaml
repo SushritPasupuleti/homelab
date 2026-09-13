@@ -32,6 +32,18 @@ spec:
               value: "${OLLAMA_NUM_GPU}"
             - name: OLLAMA_BACKEND_MODE
               value: "${OLLAMA_BACKEND_MODE}"
+            - name: HOMELAB_HF_CACHE
+              value: "/root/.cache/huggingface"
+            - name: OLLAMA_MODELS
+              value: "/root/.cache/huggingface"
+            - name: HF_HOME
+              value: "/root/.cache/huggingface"
+            - name: HUGGINGFACE_HUB_CACHE
+              value: "/root/.cache/huggingface"
+            - name: TRANSFORMERS_CACHE
+              value: "/root/.cache/huggingface"
+            - name: HF_DATASETS_CACHE
+              value: "/root/.cache/huggingface"
             - name: NVIDIA_VISIBLE_DEVICES
               value: "${OLLAMA_NVIDIA_VISIBLE_DEVICES}"
             - name: NVIDIA_DRIVER_CAPABILITIES
@@ -39,6 +51,8 @@ spec:
           volumeMounts:
             - name: ollama-storage
               mountPath: /root/.ollama
+            - name: homelab-hf-cache
+              mountPath: /root/.cache/huggingface
           resources:
             requests:
               cpu: 500m
@@ -52,6 +66,10 @@ spec:
         - name: ollama-storage
           persistentVolumeClaim:
             claimName: ollama-data
+        - name: homelab-hf-cache
+          hostPath:
+            path: /home/sushrit_lawliet/code/homelab/.cache/huggingface
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

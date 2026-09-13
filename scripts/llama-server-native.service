@@ -1,0 +1,23 @@
+[Unit]
+Description=llama.cpp Native Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/sushrit_lawliet/code/homelab/native-llama-server
+Environment=LLAMA_MODEL=
+Environment=LLAMA_HOST=0.0.0.0
+Environment=LLAMA_PORT=8001
+Environment=LLAMA_GPU_LAYERS=35
+Environment=LLAMA_CTX_SIZE=4096
+Environment=LLAMA_BATCH_SIZE=512
+Environment=LLAMA_THREADS=8
+Environment=LLAMA_EXTRA_ARGS=
+Environment=LLAMA_SERVER_BIN=/run/current-system/sw/bin/llama-server
+ExecStart=/usr/bin/env bash -lc 'exec /usr/bin/env python3 /home/sushrit_lawliet/code/homelab/native-llama-server/llama_server.py --model "$LLAMA_MODEL" --host "$LLAMA_HOST" --port "$LLAMA_PORT" --server-bin "$LLAMA_SERVER_BIN" --n-gpu-layers "$LLAMA_GPU_LAYERS" --ctx-size "$LLAMA_CTX_SIZE" --batch-size "$LLAMA_BATCH_SIZE" --threads "$LLAMA_THREADS" --extra-args "$LLAMA_EXTRA_ARGS"'
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
