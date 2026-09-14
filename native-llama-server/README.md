@@ -128,3 +128,17 @@ llama-server --port 8001 --host 0.0.0.0 -hf unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_M \
          -t 8 \
          --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0
 ```
+
+### Qwen-3.8 27B
+
+```bash
+llama-server --host 0.0.0.0 --port 8001 \                                                                                         at 06:12:14 
+         -hf unsloth/Qwen3.8-27B-GGUF:UD-IQ2_S \
+         -np 1 \
+         -ngl 99 \
+         -c 262144 \
+         -fa 1 \
+         -ctk q4_0 -ctv q4_0 \
+         -b 512 -ub 128 \
+         --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0
+```
