@@ -42,6 +42,7 @@ flowchart LR
 - Hermes as a standalone agent gateway and dashboard
 - Homepage dashboard for service discovery and quick access
 - Prometheus and Grafana for metrics, health, and dashboards
+- Uptime Kuma for self-hosted HTTP uptime and status monitoring across the stack
 - Portainer for cluster and container management
 - Home Assistant for smart-home automation and local control
 - Jellyfin, Plex, and File Browser for media access
@@ -139,7 +140,7 @@ On NixOS, prefer `networking.extraHosts` or your own Nix-managed DNS config inst
 
 ```nix
 networking.extraHosts = ''
-  192.168.0.79 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa vllm-native.homelab.home.arpa native-vllm.homelab.home.arpa open-webui.homelab.home.arpa ollama.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa
+  192.168.0.79 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa vllm-native.homelab.home.arpa native-vllm.homelab.home.arpa open-webui.homelab.home.arpa ollama.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa uptime-kuma.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa
 '';
 ```
 
@@ -210,6 +211,8 @@ The repository includes a small set of operational scripts that coordinate clust
 ### `./scripts/deploy.sh`
 
 Purpose: bootstrap or fully reapply the entire stack.
+
+The deploy flow also bootstraps an `uptime-kuma.homelab.home.arpa` instance and tries to create HTTP monitors for the stack through the Uptime Kuma API once the service is reachable.
 
 What it does:
 - verifies `kubectl` and cluster reachability

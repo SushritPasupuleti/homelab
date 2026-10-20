@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: uptime-kuma
+  namespace: homelab
+  labels:
+    app: uptime-kuma
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: uptime-kuma
+  template:
+    metadata:
+      labels:
+        app: uptime-kuma
+    spec:
+      containers:
+        - name: uptime-kuma
+          image: ${UPTIME_KUMA_IMAGE}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3001
+              name: http
+          env:
+            - name: PORT
+              value: "3001"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 6
+          volumeMounts:
+            - name: uptime-kuma-data
+              mountPath: /app/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: uptime-kuma-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: uptime-kuma
+  namespace: homelab
+  labels:
+    app: uptime-kuma
+spec:
+  type: ClusterIP
+  selector:
+    app: uptime-kuma
+  ports:
+    - name: http
+      port: 3001
+      targetPort: 3001
+      protocol: TCP

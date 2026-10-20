@@ -59,6 +59,8 @@ data:
                     url: http://grafana.homelab.home.arpa
                   - title: Prometheus
                     url: http://prometheus.homelab.home.arpa
+                  - title: Uptime Kuma
+                    url: http://uptime-kuma.homelab.home.arpa
                   - title: Unsloth API
                     url: http://unsloth.homelab.home.arpa
                   - title: Unsloth Studio
@@ -97,6 +99,8 @@ data:
                         url: http://grafana.homelab.home.arpa
                       - title: Prometheus
                         url: http://prometheus.homelab.home.arpa
+                      - title: Uptime Kuma
+                        url: http://uptime-kuma.homelab.home.arpa
                   - title: Apps
                     links:
                       - title: Stock-EZ
