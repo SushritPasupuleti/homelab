@@ -17,6 +17,7 @@ fi
 
 HOST_ALIASES=(
   dashboard.homelab.home.arpa
+  portfolio.homelab.home.arpa
   portainer.homelab.home.arpa
   stock-ez.homelab.home.arpa
   homeassistant.homelab.home.arpa
@@ -89,9 +90,9 @@ if ! touch "$HOSTS_FILE" 2>/dev/null; then
   exit 1
 fi
 
-if grep -qE "dashboard\.homelab\.home\.arpa|portainer\.homelab\.home\.arpa|stock-ez\.homelab\.home\.arpa|homeassistant\.homelab\.home\.arpa|open-webui\.homelab\.home\.arpa|openserp\.homelab\.home\.arpa|hermes\.homelab\.home\.arpa|hermes-dashboard\.homelab\.home\.arpa|unsloth\.homelab\.home\.arpa|unsloth-studio\.homelab\.home\.arpa|vllm\.homelab\.home\.arpa|vllm-native\.homelab\.home\.arpa|native-vllm\.homelab\.home\.arpa|media\.homelab\.home\.arpa|plex\.homelab\.home\.arpa|grafana\.homelab\.home\.arpa|prometheus\.homelab\.home\.arpa|torrent\.homelab\.home\.arpa|files\.homelab\.home\.arpa" "$HOSTS_FILE"; then
+if grep -qE "dashboard\.homelab\.home\.arpa|portfolio\.homelab\.home\.arpa|portainer\.homelab\.home\.arpa|stock-ez\.homelab\.home\.arpa|homeassistant\.homelab\.home\.arpa|open-webui\.homelab\.home\.arpa|openserp\.homelab\.home\.arpa|hermes\.homelab\.home\.arpa|hermes-dashboard\.homelab\.home\.arpa|unsloth\.homelab\.home\.arpa|unsloth-studio\.homelab\.home\.arpa|vllm\.homelab\.home\.arpa|vllm-native\.homelab\.home\.arpa|native-vllm\.homelab\.home\.arpa|media\.homelab\.home\.arpa|plex\.homelab\.home\.arpa|grafana\.homelab\.home\.arpa|prometheus\.homelab\.home\.arpa|torrent\.homelab\.home\.arpa|files\.homelab\.home\.arpa" "$HOSTS_FILE"; then
   tmp_file="$(mktemp)"
-  grep -vE "dashboard\.homelab\.home\.arpa|portainer\.homelab\.home\.arpa|stock-ez\.homelab\.home\.arpa|homeassistant\.homelab\.home\.arpa|open-webui\.homelab\.home\.arpa|openserp\.homelab\.home\.arpa|hermes\.homelab\.home\.arpa|hermes-dashboard\.homelab\.home\.arpa|unsloth\.homelab\.home\.arpa|unsloth-studio\.homelab\.home\.arpa|vllm\.homelab\.home\.arpa|vllm-native\.homelab\.home\.arpa|native-vllm\.homelab\.home\.arpa|media\.homelab\.home\.arpa|plex\.homelab\.home\.arpa|grafana\.homelab\.home\.arpa|prometheus\.homelab\.home\.arpa|torrent\.homelab\.home\.arpa|files\.homelab\.home\.arpa" "$HOSTS_FILE" > "$tmp_file" || true
+  grep -vE "dashboard\.homelab\.home\.arpa|portfolio\.homelab\.home\.arpa|portainer\.homelab\.home\.arpa|stock-ez\.homelab\.home\.arpa|homeassistant\.homelab\.home\.arpa|open-webui\.homelab\.home\.arpa|openserp\.homelab\.home\.arpa|hermes\.homelab\.home\.arpa|hermes-dashboard\.homelab\.home\.arpa|unsloth\.homelab\.home\.arpa|unsloth-studio\.homelab\.home\.arpa|vllm\.homelab\.home\.arpa|vllm-native\.homelab\.home\.arpa|native-vllm\.homelab\.home\.arpa|media\.homelab\.home\.arpa|plex\.homelab\.home\.arpa|grafana\.homelab\.home\.arpa|prometheus\.homelab\.home\.arpa|torrent\.homelab\.home\.arpa|files\.homelab\.home\.arpa" "$HOSTS_FILE" > "$tmp_file" || true
   cat "$tmp_file" > "$HOSTS_FILE"
   rm -f "$tmp_file"
 fi

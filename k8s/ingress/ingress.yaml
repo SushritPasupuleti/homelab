@@ -3,8 +3,15 @@ kind: Ingress
 metadata:
   name: homelab-ingress
   namespace: homelab
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - "*.homelab.home.arpa"
+      secretName: homelab-wildcard-tls
   rules:
     - host: portfolio.homelab.home.arpa
       http:

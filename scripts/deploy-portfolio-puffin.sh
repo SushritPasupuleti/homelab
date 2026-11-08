@@ -8,6 +8,10 @@ if ! command -v kubectl >/dev/null 2>&1 || ! kubectl cluster-info >/dev/null 2>&
   echo "A reachable Kubernetes cluster is required to deploy Portfolio Puffin." >&2
   exit 1
 fi
+if ! kubectl get secret -n homelab homelab-wildcard-tls >/dev/null 2>&1; then
+  echo "The HTTPS certificate is not installed. Run ./scripts/setup-homelab-tls.sh first." >&2
+  exit 1
+fi
 
 PORTFOLIO_PUFFIN_API_IMAGE="${PORTFOLIO_PUFFIN_API_IMAGE:-portfolio-puffin-api:local}"
 PORTFOLIO_PUFFIN_WEB_IMAGE="${PORTFOLIO_PUFFIN_WEB_IMAGE:-portfolio-puffin-web:local}"

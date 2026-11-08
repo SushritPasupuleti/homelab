@@ -24,7 +24,7 @@ spec:
               name: http
           env:
             - name: WEBUI_URL
-              value: "http://open-webui.homelab.home.arpa"
+              value: "https://open-webui.homelab.home.arpa"
             - name: OPENAI_API_BASE_URL
               value: "http://ollama.homelab.svc.cluster.local:11434"
             - name: OPENAI_API_KEY

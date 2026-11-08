@@ -216,7 +216,7 @@ spec:
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
             - name: GF_SERVER_ROOT_URL
-              value: "http://grafana.homelab.home.arpa"
+              value: "https://grafana.homelab.home.arpa"
             - name: GF_PATHS_PROVISIONING
               value: "/etc/grafana/provisioning"
             - name: GF_AUTH_ANONYMOUS_ENABLED

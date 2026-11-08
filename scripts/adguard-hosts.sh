@@ -25,6 +25,7 @@ cat <<EOF
 # Ingress IP: ${RESOLVED_IP}
 
 ${RESOLVED_IP} dashboard.homelab.home.arpa
+${RESOLVED_IP} portfolio.homelab.home.arpa
 ${RESOLVED_IP} stock-ez.homelab.home.arpa
 ${RESOLVED_IP} open-webui.homelab.home.arpa
 ${RESOLVED_IP} openserp.homelab.home.arpa

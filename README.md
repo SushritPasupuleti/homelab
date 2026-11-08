@@ -93,6 +93,7 @@ Example:
 
 ```text
 dashboard.homelab.home.arpa      -> 192.168.0.79
+portfolio.homelab.home.arpa      -> 192.168.0.79
 unsloth.homelab.home.arpa        -> 192.168.0.79
 unsloth-studio.homelab.home.arpa -> 192.168.0.79
 open-webui.homelab.home.arpa     -> 192.168.0.79
@@ -100,6 +101,22 @@ ollama.homelab.home.arpa         -> 192.168.0.79
 openserp.homelab.home.arpa       -> 192.168.0.79
 hermes.homelab.home.arpa         -> 192.168.0.79
 ```
+
+### HTTPS for homelab hostnames
+
+All browser-facing hostnames routed through the ingress use a wildcard certificate for `*.homelab.home.arpa`. Since `home.arpa` is a special-use name with local scope, public certificate authorities cannot issue a publicly trusted certificate for it; this stack creates a local root CA and installs its wildcard certificate in the Kubernetes ingress secret. See [RFC 8375](https://datatracker.ietf.org/doc/html/rfc8375).
+
+After the cluster and ingress-nginx are running, create the CA and enable TLS:
+
+```bash
+./scripts/setup-homelab-tls.sh
+```
+
+Install `.local/tls/homelab-root-ca.crt` in the trusted root certificate store on every device that opens homelab sites. On NixOS, add the file to `security.pki.certificateFiles` and run `sudo nixos-rebuild switch`. On Debian or Ubuntu, copy it to `/usr/local/share/ca-certificates/` and run `sudo update-ca-certificates`. Other operating systems and browsers need the certificate imported into their trusted root store. Until the CA is trusted, browsers will show a certificate warning even though the connection is encrypted.
+
+The root CA private key stays under `.local/tls/`, which is gitignored. Keep it private and back it up securely. Rerun the setup script before the 397-day server certificate expires to renew the wildcard certificate without changing the CA. Internal pod-to-pod ClusterIP traffic and direct NodePort access remain on their service protocols; use the HTTPS ingress hostnames for browser access.
+
+For certificates trusted automatically by devices without installing a local CA, use a domain you control and DNS-01 ACME validation with split-horizon DNS. `home.arpa` is intentionally not globally unique. The current ingress-nginx controller also reached project retirement in March 2026, after which the project states it will receive no releases or security fixes; plan a migration to a maintained ingress or Gateway API controller. See the [ingress-nginx retirement notice](https://kubernetes.github.io/ingress-nginx/).
 
 ### Fallback setup
 
@@ -376,14 +393,20 @@ Use with caution: this is destructive and should only be used when intentionally
 HOST_IP=192.168.0.6 ./scripts/install-ingress-nginx.sh
 ```
 
-3. Deploy the stack:
+3. Generate the local CA and enable HTTPS on the ingress:
+
+```bash
+./scripts/setup-homelab-tls.sh
+```
+
+4. Deploy the stack:
 
 ```bash
 chmod +x scripts/*.sh
 ./scripts/deploy.sh
 ```
 
-4. Validate the resources:
+5. Validate the resources:
 
 ```bash
 kubectl get pods -n homelab
@@ -395,27 +418,27 @@ kubectl get ingress -n homelab
 
 | Service | URL | Notes |
 | --- | --- | --- |
-| Homepage dashboard | `http://dashboard.homelab.home.arpa` | ingress-backed UI |
-| Portfolio Puffin | `http://portfolio.homelab.home.arpa` | UI/API; SQLite and local credentials persist in a 10 GiB PVC; AI review uses homelab Ollama |
+| Homepage dashboard | `https://dashboard.homelab.home.arpa` | ingress-backed UI |
+| Portfolio Puffin | `https://portfolio.homelab.home.arpa` | UI/API; SQLite and local credentials persist in a 10 GiB PVC; AI review uses homelab Ollama |
 | Project README | `https://github.com/SushritPasupuleti/homelab/blob/main/README.md` | repo documentation |
-| Unsloth API | `http://unsloth.homelab.home.arpa` | primary OpenAI-compatible model API |
-| Unsloth Studio | `http://unsloth-studio.homelab.home.arpa` | local web interface for the Unsloth stack |
-| Open WebUI | `http://open-webui.homelab.home.arpa` | chat UI and model management |
-| OpenSERP | `http://openserp.homelab.home.arpa` | search backend |
-| Hermes | `http://hermes.homelab.home.arpa` | gateway endpoint |
-| Hermes dashboard | `http://hermes-dashboard.homelab.home.arpa` | dashboard UI |
-| Portainer | `http://portainer.homelab.home.arpa` | container admin |
-| Home Assistant | `http://homeassistant.homelab.home.arpa` | smart-home automation |
-| Grafana | `http://grafana.homelab.home.arpa` | metrics visualisation |
-| Prometheus | `http://prometheus.homelab.home.arpa` | metrics collection |
-| qBittorrent | `http://torrent.homelab.home.arpa` | downloads |
-| File Browser | `http://files.homelab.home.arpa` | files |
-| Jellyfin | `http://media.homelab.home.arpa` | media streaming |
-| Plex | `http://plex.homelab.home.arpa` | media streaming |
+| Unsloth API | `https://unsloth.homelab.home.arpa` | primary OpenAI-compatible model API |
+| Unsloth Studio | `https://unsloth-studio.homelab.home.arpa` | local web interface for the Unsloth stack |
+| Open WebUI | `https://open-webui.homelab.home.arpa` | chat UI and model management |
+| OpenSERP | `https://openserp.homelab.home.arpa` | search backend |
+| Hermes | `https://hermes.homelab.home.arpa` | gateway endpoint |
+| Hermes dashboard | `https://hermes-dashboard.homelab.home.arpa` | dashboard UI |
+| Portainer | `https://portainer.homelab.home.arpa` | container admin |
+| Home Assistant | `https://homeassistant.homelab.home.arpa` | smart-home automation |
+| Grafana | `https://grafana.homelab.home.arpa` | metrics visualisation |
+| Prometheus | `https://prometheus.homelab.home.arpa` | metrics collection |
+| qBittorrent | `https://torrent.homelab.home.arpa` | downloads |
+| File Browser | `https://files.homelab.home.arpa` | files |
+| Jellyfin | `https://media.homelab.home.arpa` | media streaming |
+| Plex | `https://plex.homelab.home.arpa` | media streaming |
 
 ### NodePort fallback
 
-If ingress is not available or a host entry is missing, use the node IP and service ports as a fallback. For example:
+If ingress is not available or a host entry is missing, use the node IP and service ports as a fallback. Direct NodePort access bypasses ingress TLS. For example:
 
 ```bash
 curl -I http://<node-ip>:30080
@@ -432,7 +455,7 @@ Check:
 
 ```bash
 nslookup dashboard.homelab.home.arpa
-curl -I http://dashboard.homelab.home.arpa
+curl -I https://dashboard.homelab.home.arpa
 kubectl get ingress -n homelab -o wide
 kubectl describe ingress homelab-ingress -n homelab
 ```
@@ -625,9 +648,9 @@ The WD EX4100 is a good fit as a read-only media source on the LAN. The most rel
 
 Recommended setup:
 
-- Jellyfin at `http://media.homelab.home.arpa` for a free media library UI
+- Jellyfin at `https://media.homelab.home.arpa` for a free media library UI
 - MiniDLNA at the LAN for Kodi/VLC/DLNA autodiscovery
-- Plex at `http://plex.homelab.home.arpa` for Plex clients if you want that experience
+- Plex at `https://plex.homelab.home.arpa` for Plex clients if you want that experience
 
 Mount the WDEX4100 share on the Kubernetes node:
 

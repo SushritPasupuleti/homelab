@@ -26,7 +26,7 @@ spec:
               name: https
           env:
             - name: JELLYFIN_PublishedServerUrl
-              value: "http://media.homelab.home.arpa"
+              value: "https://media.homelab.home.arpa"
           volumeMounts:
             - name: media-general
               mountPath: /media/General

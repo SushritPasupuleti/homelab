@@ -158,6 +158,7 @@ env.bak/
 venv.bak/
 .homelab-secrets.env
 .homelab-secrets.*
+/.local/tls/
 
 # Spyder project settings
 .spyderproject

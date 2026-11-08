@@ -96,4 +96,4 @@ printf '  model path: %s\n' "$VLLM_MODEL_PATH"
 printf '  extra args: %s\n' "$VLLM_EXTRA_ARGS"
 printf '  image: %s\n' "$VLLM_IMAGE"
 printf '  namespace: %s\n' "$VLLM_NAMESPACE"
-printf '  endpoint: http://vllm.homelab.home.arpa\n'
+printf '  endpoint: https://vllm.homelab.home.arpa\n'

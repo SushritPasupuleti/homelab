@@ -19,8 +19,8 @@ data:
         - ::1
 
     homeassistant:
-      internal_url: http://homeassistant.homelab.home.arpa
-      external_url: http://homeassistant.homelab.home.arpa
+      internal_url: https://homeassistant.homelab.home.arpa
+      external_url: https://homeassistant.homelab.home.arpa
 
     # Load frontend themes from the themes folder
     frontend:

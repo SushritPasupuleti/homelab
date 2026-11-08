@@ -15,6 +15,11 @@ if ! kubectl cluster-info >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! kubectl get secret -n homelab homelab-wildcard-tls >/dev/null 2>&1; then
+  echo "ERROR: HTTPS ingress certificate is missing. Run ./scripts/setup-homelab-tls.sh first."
+  exit 1
+fi
+
 OLLAMA_ENABLED="${OLLAMA_ENABLED:-true}"
 UNSLOTH_ENABLED="${UNSLOTH_ENABLED:-true}"
 GPU_SERVICE="${GPU_SERVICE:-ollama}"
@@ -411,24 +416,24 @@ EOF
 log_homelab_credentials() {
   echo
   echo "=== Homelab credentials ==="
-  echo "Portainer: http://portainer.homelab.home.arpa"
+  echo "Portainer: https://portainer.homelab.home.arpa"
   echo "  Username: $PORTAINER_ADMIN_USER"
   echo "  Password: $PORTAINER_ADMIN_PASSWORD"
-  echo "Grafana: http://grafana.homelab.home.arpa"
+  echo "Grafana: https://grafana.homelab.home.arpa"
   echo "  Username: $GRAFANA_ADMIN_USER"
   echo "  Password: $GRAFANA_ADMIN_PASSWORD"
-  echo "Prometheus: http://prometheus.homelab.home.arpa"
-  echo "OpenSERP: http://$OPENSERP_HOST"
-  echo "  API docs: http://$OPENSERP_HOST/docs"
-  echo "Hermes: http://$HERMES_HOST"
-  echo "  Dashboard: http://$HERMES_DASHBOARD_HOST"
-  echo "qBittorrent: http://torrent.homelab.home.arpa"
+  echo "Prometheus: https://prometheus.homelab.home.arpa"
+  echo "OpenSERP: https://$OPENSERP_HOST"
+  echo "  API docs: https://$OPENSERP_HOST/docs"
+  echo "Hermes: https://$HERMES_HOST"
+  echo "  Dashboard: https://$HERMES_DASHBOARD_HOST"
+  echo "qBittorrent: https://torrent.homelab.home.arpa"
   echo "  Username: $QBITTORRENT_USERNAME"
   echo "  Password: $QBITTORRENT_PASSWORD"
-  echo "File Browser: http://files.homelab.home.arpa"
+  echo "File Browser: https://files.homelab.home.arpa"
   echo "  Username: $FILEBROWSER_USERNAME"
   echo "  Password: $FILEBROWSER_PASSWORD"
-  echo "Unsloth Studio: http://$UNSLOTH_STUDIO_HOST"
+  echo "Unsloth Studio: https://$UNSLOTH_STUDIO_HOST"
   echo "  Username: $UNSLOTH_STUDIO_USERNAME"
   echo "  Password: $UNSLOTH_STUDIO_PASSWORD"
   echo "KV cache (Valkey): redis://$UNSLOTH_KV_CACHE_HOST:$UNSLOTH_KV_CACHE_PORT"

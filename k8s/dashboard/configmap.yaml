@@ -48,43 +48,43 @@ data:
                 cache: 30s
                 sites:
                   - title: Dashboard
-                    url: http://dashboard.homelab.home.arpa
+                    url: https://dashboard.homelab.home.arpa
                   - title: Project README
                     url: https://github.com/SushritPasupuleti/homelab/blob/main/README.md
                   - title: Stock-EZ
-                    url: http://stock-ez.homelab.home.arpa
+                    url: https://stock-ez.homelab.home.arpa
                   - title: Portfolio Puffin
-                    url: http://portfolio.homelab.home.arpa
+                    url: https://portfolio.homelab.home.arpa
                   - title: Portainer
-                    url: http://portainer.homelab.home.arpa
+                    url: https://portainer.homelab.home.arpa
                   - title: Grafana
-                    url: http://grafana.homelab.home.arpa
+                    url: https://grafana.homelab.home.arpa
                   - title: Prometheus
-                    url: http://prometheus.homelab.home.arpa
+                    url: https://prometheus.homelab.home.arpa
                   - title: Uptime Kuma
-                    url: http://uptime-kuma.homelab.home.arpa
+                    url: https://uptime-kuma.homelab.home.arpa
                   - title: Unsloth API
-                    url: http://unsloth.homelab.home.arpa
+                    url: https://unsloth.homelab.home.arpa
                   - title: Unsloth Studio
-                    url: http://unsloth-studio.homelab.home.arpa
+                    url: https://unsloth-studio.homelab.home.arpa
                   - title: Ollama API
-                    url: http://ollama.homelab.home.arpa
+                    url: https://ollama.homelab.home.arpa
                   - title: Open WebUI
-                    url: http://open-webui.homelab.home.arpa
+                    url: https://open-webui.homelab.home.arpa
                   - title: Hermes
-                    url: http://hermes.homelab.home.arpa
+                    url: https://hermes.homelab.home.arpa
                   - title: Hermes Dashboard
-                    url: http://hermes-dashboard.homelab.home.arpa
+                    url: https://hermes-dashboard.homelab.home.arpa
                   - title: Home Assistant
-                    url: http://homeassistant.homelab.home.arpa
+                    url: https://homeassistant.homelab.home.arpa
                   - title: Jellyfin
-                    url: http://media.homelab.home.arpa
+                    url: https://media.homelab.home.arpa
                   - title: Plex
-                    url: http://plex.homelab.home.arpa
+                    url: https://plex.homelab.home.arpa
                   - title: qBittorrent
-                    url: http://torrent.homelab.home.arpa
+                    url: https://torrent.homelab.home.arpa
                   - title: File Browser
-                    url: http://files.homelab.home.arpa
+                    url: https://files.homelab.home.arpa
 
               - type: bookmarks
                 title: Core services
@@ -92,41 +92,41 @@ data:
                   - title: Infrastructure
                     links:
                       - title: Dashboard
-                        url: http://dashboard.homelab.home.arpa
+                        url: https://dashboard.homelab.home.arpa
                       - title: Project README
                         url: https://github.com/SushritPasupuleti/homelab/blob/main/README.md
                       - title: Portainer
-                        url: http://portainer.homelab.home.arpa
+                        url: https://portainer.homelab.home.arpa
                       - title: Grafana
-                        url: http://grafana.homelab.home.arpa
+                        url: https://grafana.homelab.home.arpa
                       - title: Prometheus
-                        url: http://prometheus.homelab.home.arpa
+                        url: https://prometheus.homelab.home.arpa
                       - title: Uptime Kuma
-                        url: http://uptime-kuma.homelab.home.arpa
+                        url: https://uptime-kuma.homelab.home.arpa
                   - title: Apps
                     links:
                       - title: Stock-EZ
-                        url: http://stock-ez.homelab.home.arpa
+                        url: https://stock-ez.homelab.home.arpa
                       - title: Portfolio Puffin
-                        url: http://portfolio.homelab.home.arpa
+                        url: https://portfolio.homelab.home.arpa
                       - title: Portfolio Puffin source
                         url: https://github.com/SushritPasupuleti/portfolio-zero
                       - title: Home Assistant
-                        url: http://homeassistant.homelab.home.arpa
+                        url: https://homeassistant.homelab.home.arpa
                       - title: Open WebUI
-                        url: http://open-webui.homelab.home.arpa
+                        url: https://open-webui.homelab.home.arpa
                       - title: OpenSERP
-                        url: http://openserp.homelab.home.arpa/docs
+                        url: https://openserp.homelab.home.arpa/docs
                       - title: Hermes
-                        url: http://hermes.homelab.home.arpa
+                        url: https://hermes.homelab.home.arpa
                       - title: Hermes Dashboard
-                        url: http://hermes-dashboard.homelab.home.arpa
+                        url: https://hermes-dashboard.homelab.home.arpa
                       - title: Unsloth API
-                        url: http://unsloth.homelab.home.arpa
+                        url: https://unsloth.homelab.home.arpa
                       - title: Unsloth Studio
-                        url: http://unsloth-studio.homelab.home.arpa
+                        url: https://unsloth-studio.homelab.home.arpa
                       - title: Ollama API
-                        url: http://ollama.homelab.home.arpa
+                        url: https://ollama.homelab.home.arpa
 
           - size: full
             widgets:
@@ -196,31 +196,31 @@ data:
                 cache: 30s
                 sites:
                   - title: Home Assistant
-                    url: http://homeassistant.homelab.home.arpa
+                    url: https://homeassistant.homelab.home.arpa
                   - title: Open WebUI
-                    url: http://open-webui.homelab.home.arpa
+                    url: https://open-webui.homelab.home.arpa
                   - title: Portfolio Puffin
-                    url: http://portfolio.homelab.home.arpa
+                    url: https://portfolio.homelab.home.arpa
                   - title: Unsloth API
-                    url: http://unsloth.homelab.home.arpa
+                    url: https://unsloth.homelab.home.arpa
                   - title: Unsloth Studio
-                    url: http://unsloth-studio.homelab.home.arpa
+                    url: https://unsloth-studio.homelab.home.arpa
                   - title: Ollama API
-                    url: http://ollama.homelab.home.arpa
+                    url: https://ollama.homelab.home.arpa
                   - title: Native vLLM
-                    url: http://vllm-native.homelab.home.arpa
+                    url: https://vllm-native.homelab.home.arpa
                   - title: OpenSERP
-                    url: http://openserp.homelab.home.arpa/docs
+                    url: https://openserp.homelab.home.arpa/docs
                   - title: Hermes Dashboard
-                    url: http://hermes-dashboard.homelab.home.arpa
+                    url: https://hermes-dashboard.homelab.home.arpa
                   - title: Jellyfin
-                    url: http://media.homelab.home.arpa
+                    url: https://media.homelab.home.arpa
                   - title: Plex
-                    url: http://plex.homelab.home.arpa
+                    url: https://plex.homelab.home.arpa
                   - title: qBittorrent
-                    url: http://torrent.homelab.home.arpa
+                    url: https://torrent.homelab.home.arpa
                   - title: File Browser
-                    url: http://files.homelab.home.arpa
+                    url: https://files.homelab.home.arpa
 
               - type: bookmarks
                 title: Media and downloads
@@ -228,15 +228,15 @@ data:
                   - title: Media
                     links:
                       - title: Jellyfin
-                        url: http://media.homelab.home.arpa
+                        url: https://media.homelab.home.arpa
                       - title: Plex
-                        url: http://plex.homelab.home.arpa
+                        url: https://plex.homelab.home.arpa
                   - title: Downloads
                     links:
                       - title: qBittorrent
-                        url: http://torrent.homelab.home.arpa
+                        url: https://torrent.homelab.home.arpa
                       - title: File Browser
-                        url: http://files.homelab.home.arpa
+                        url: https://files.homelab.home.arpa
                   - title: LAN access
                     links:
                       - title: Stock-EZ (IP)
@@ -262,21 +262,21 @@ data:
                 cache: 30s
                 sites:
                   - title: Grafana
-                    url: http://grafana.homelab.home.arpa
+                    url: https://grafana.homelab.home.arpa
                   - title: Prometheus
-                    url: http://prometheus.homelab.home.arpa
+                    url: https://prometheus.homelab.home.arpa
                   - title: Portainer
-                    url: http://portainer.homelab.home.arpa
+                    url: https://portainer.homelab.home.arpa
                   - title: Open WebUI
-                    url: http://open-webui.homelab.home.arpa
+                    url: https://open-webui.homelab.home.arpa
                   - title: Ollama API
-                    url: http://ollama.homelab.home.arpa
+                    url: https://ollama.homelab.home.arpa
                   - title: Hermes Dashboard
-                    url: http://hermes-dashboard.homelab.home.arpa
+                    url: https://hermes-dashboard.homelab.home.arpa
                   - title: Unsloth API
-                    url: http://unsloth.homelab.home.arpa
+                    url: https://unsloth.homelab.home.arpa
                   - title: Unsloth Studio
-                    url: http://unsloth-studio.homelab.home.arpa
+                    url: https://unsloth-studio.homelab.home.arpa
 
               - type: bookmarks
                 title: Monitoring quick links
@@ -284,31 +284,31 @@ data:
                   - title: Dashboards
                     links:
                       - title: Grafana
-                        url: http://grafana.homelab.home.arpa
+                        url: https://grafana.homelab.home.arpa
                       - title: Prometheus
-                        url: http://prometheus.homelab.home.arpa
+                        url: https://prometheus.homelab.home.arpa
                       - title: OpenSERP
-                        url: http://openserp.homelab.home.arpa/docs
+                        url: https://openserp.homelab.home.arpa/docs
                       - title: Dashboard
-                        url: http://dashboard.homelab.home.arpa
+                        url: https://dashboard.homelab.home.arpa
                   - title: AI services
                     links:
                       - title: Ollama API
-                        url: http://ollama.homelab.home.arpa
+                        url: https://ollama.homelab.home.arpa
                       - title: Open WebUI
-                        url: http://open-webui.homelab.home.arpa
+                        url: https://open-webui.homelab.home.arpa
                       - title: Hermes Dashboard
-                        url: http://hermes-dashboard.homelab.home.arpa
+                        url: https://hermes-dashboard.homelab.home.arpa
                       - title: Unsloth API
-                        url: http://unsloth.homelab.home.arpa
+                        url: https://unsloth.homelab.home.arpa
                       - title: Unsloth Studio
-                        url: http://unsloth-studio.homelab.home.arpa
+                        url: https://unsloth-studio.homelab.home.arpa
 
           - size: full
             widgets:
               - type: iframe
                 title: Homelab dashboard
-                source: http://grafana.homelab.home.arpa/d/home/homelab-overview?orgId=1&theme=dark&kiosk
+                source: https://grafana.homelab.home.arpa/d/home/homelab-overview?orgId=1&theme=dark&kiosk
                 height: 860
 
               - type: custom-api
@@ -852,11 +852,11 @@ data:
                 cache: 30s
                 sites:
                   - title: Unsloth API
-                    url: http://unsloth.homelab.home.arpa
+                    url: https://unsloth.homelab.home.arpa
                   - title: Open WebUI
-                    url: http://open-webui.homelab.home.arpa
+                    url: https://open-webui.homelab.home.arpa
                   - title: Hermes
-                    url: http://hermes.homelab.home.arpa
+                    url: https://hermes.homelab.home.arpa
 
               - type: bookmarks
                 title: Unsloth access
@@ -864,11 +864,11 @@ data:
                   - title: Links
                     links:
                       - title: Unsloth API
-                        url: http://unsloth.homelab.home.arpa
+                        url: https://unsloth.homelab.home.arpa
                       - title: Open WebUI
-                        url: http://open-webui.homelab.home.arpa
+                        url: https://open-webui.homelab.home.arpa
                       - title: Model list
-                        url: http://unsloth.homelab.home.arpa/v1/models
+                        url: https://unsloth.homelab.home.arpa/v1/models
 
           - size: full
             widgets:
@@ -933,11 +933,11 @@ data:
                   - title: Services
                     links:
                       - title: Dashboard
-                        url: http://dashboard.homelab.home.arpa
+                        url: https://dashboard.homelab.home.arpa
                       - title: Portainer
-                        url: http://portainer.homelab.home.arpa
+                        url: https://portainer.homelab.home.arpa
                       - title: Home Assistant
-                        url: http://homeassistant.homelab.home.arpa
+                        url: https://homeassistant.homelab.home.arpa
                       - title: Grafana
-                        url: http://grafana.homelab.home.arpa
+                        url: https://grafana.homelab.home.arpa
 
