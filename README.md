@@ -1,13 +1,16 @@
 # Homelab Kubernetes Stack
 
-This repository provisions a Kubernetes-based homelab for AI, automation, media, and monitoring workloads on a LAN. The stack is intentionally opinionated: a single ingress entry-point, a DNS-friendly hostname layer, and a set of services that work together without requiring a full cloud backend.
+This repository provisions a Kubernetes-based homelab for AI, automation, media, and monitoring workloads on a LAN. The stack uses a single TLS-enabled ingress entry point, local DNS names under `home.arpa`, a locally trusted certificate authority, and scripts plus a Bubble Tea TUI for day-to-day operations.
+
+The [Homelab operations guide](docs/homelab-operations.md) covers HTTPS trust, deployments, the control TUI, Ollama model management, Portfolio Puffin's upstream submodule/build workflow, persistent data, and troubleshooting.
 
 ## Architecture overview
 
 ```mermaid
 flowchart LR
     User[LAN clients / browsers / devices] --> DNS[AdGuard Home or local DNS]
-    DNS --> Ingress[Ingress NGINX / host IP]
+    DNS --> Ingress[Ingress NGINX / host IP / HTTPS]
+    Admin[Host terminal / Homelab Control TUI] --> K8s[Kubernetes cluster]
     Ingress --> Dashboard[Homepage dashboard]
     Ingress --> WebUI[Open WebUI]
     Ingress --> UnslothAPI[Unsloth API]
@@ -36,13 +39,14 @@ flowchart LR
 
 - Stock-EZ for app workloads and internal reporting
 - Portfolio Puffin for a local read-only Zerodha portfolio dashboard
-- Unsloth API and Studio as the local AI editing and experimentation layer
-- Ollama as the default GPU-backed model-serving layer for local inference
+- Unsloth API and Studio as the local AI editing and experimentation layer; CPU mode is supported without NVIDIA
+- Ollama as the default model-serving layer for local inference, using NVIDIA when available and CPU otherwise
 - vLLM kept as an opt-in, GPU-specific serving path when you want a dedicated OpenAI-compatible server
 - Open WebUI for browser-based chat and model access
 - OpenSERP as the local search backend used by Hermes and related AI tooling
 - Hermes as a standalone agent gateway and dashboard
 - Homepage dashboard for service discovery and quick access
+- Homelab Control TUI for managing Kubernetes Deployments and StatefulSets, resetting the Unsloth password, and installing/listing Ollama models
 - Prometheus and Grafana for metrics, health, and dashboards
 - Uptime Kuma for self-hosted HTTP uptime and status monitoring across the stack
 - Portainer for cluster and container management
@@ -57,7 +61,7 @@ flowchart LR
 2. Prefer LAN DNS (for example AdGuard Home) over ad hoc /etc/hosts overrides.
 3. Keep inter-service communication inside the Kubernetes cluster via service DNS names.
 4. Default to the node/host IP for ingress so the stack stays independent of a separate load-balancer service.
-5. Keep public-facing URLs stable and intentionally namespaced under `.homelab.home.arpa`.
+5. Keep LAN-facing browser URLs stable and intentionally namespaced under `.homelab.home.arpa`.
 6. Treat DNS and ingress as a first-class part of the stack; 404s are often a routing or hostname issue rather than an app issue.
 
 ## Network and DNS model
@@ -73,8 +77,6 @@ The stack is intended to be reachable through hostnames such as:
 - `native-vllm.homelab.home.arpa` (alias)
 - `llama-server.homelab.home.arpa` (bare-metal llama.cpp GGUF service)
 - `llama-server-native.homelab.home.arpa` (alias)
-- `llama-server.homelab.home.arpa` (bare-metal llama.cpp GGUF service)
-- `llama-server-native.homelab.home.arpa` (alias)
 - `open-webui.homelab.home.arpa`
 - `openserp.homelab.home.arpa`
 - `hermes.homelab.home.arpa`
@@ -82,6 +84,9 @@ The stack is intended to be reachable through hostnames such as:
 - `homeassistant.homelab.home.arpa`
 - `media.homelab.home.arpa`
 - `plex.homelab.home.arpa`
+- `uptime-kuma.homelab.home.arpa`
+- `grafana.homelab.home.arpa`
+- `prometheus.homelab.home.arpa`
 
 ### Preferred setup
 
@@ -123,7 +128,7 @@ For certificates trusted automatically by devices without installing a local CA,
 If there is no LAN DNS server, use a host override on the client. This is fine for a lab but should not be treated as the network-wide solution.
 
 ```bash
-sudo sh -c 'echo "192.168.0.79 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa vllm-native.homelab.home.arpa native-vllm.homelab.home.arpa open-webui.homelab.home.arpa ollama.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa" >> /etc/hosts'
+sudo sh -c 'echo "192.168.0.79 dashboard.homelab.home.arpa portfolio.homelab.home.arpa stock-ez.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa ollama.homelab.home.arpa vllm-native.homelab.home.arpa native-vllm.homelab.home.arpa llama-server.homelab.home.arpa llama-server-native.homelab.home.arpa open-webui.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa portainer.homelab.home.arpa uptime-kuma.homelab.home.arpa grafana.homelab.home.arpa prometheus.homelab.home.arpa torrent.homelab.home.arpa files.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa" >> /etc/hosts'
 ```
 
 The helper script in this repo can generate a host-file style entry. It prefers the ingress IP when it can detect one, and falls back to the node IP only when needed.
@@ -141,16 +146,16 @@ The stack now uses a single repo-local Hugging Face cache at `.cache/huggingface
 - Ollama is configured to use `/root/.cache/huggingface` and mounts the repo-root cache via `hostPath`
 - Unsloth is configured to use `/root/.cache/huggingface` as well and mounts the same repo-root cache into the container
 
-This keeps all model downloads and cache reuse consistent across the host and the cluster. The current working directory is expected to be the repo root, and the shared directory is:
+This keeps model downloads and cache reuse consistent across the host and cluster. The shared directory is `.cache/huggingface` under the repository root. The Ollama and Unsloth manifests currently mount the host path `/home/sushrit_lawliet/code/homelab/.cache/huggingface`; if you check out the repository elsewhere, update those `hostPath` values before deploying.
 
 ```bash
-/home/sushrit_lawliet/code/homelab/.cache/huggingface
+<homelab-repo>/.cache/huggingface
 ```
 
 To pre-download a model into the shared cache from the host:
 
 ```bash
-cd /home/sushrit_lawliet/code/homelab
+cd /path/to/homelab
 uv run --with huggingface_hub python download_hf_model.py unsloth/gemma-4-E2B-it --cache-dir .cache/huggingface
 ```
 
@@ -160,7 +165,7 @@ On NixOS, prefer `networking.extraHosts` or your own Nix-managed DNS config inst
 
 ```nix
 networking.extraHosts = ''
-  192.168.0.79 dashboard.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa vllm-native.homelab.home.arpa native-vllm.homelab.home.arpa open-webui.homelab.home.arpa ollama.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa uptime-kuma.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa
+  192.168.0.79 dashboard.homelab.home.arpa portfolio.homelab.home.arpa stock-ez.homelab.home.arpa unsloth.homelab.home.arpa unsloth-studio.homelab.home.arpa ollama.homelab.home.arpa vllm-native.homelab.home.arpa native-vllm.homelab.home.arpa llama-server.homelab.home.arpa llama-server-native.homelab.home.arpa open-webui.homelab.home.arpa openserp.homelab.home.arpa hermes.homelab.home.arpa hermes-dashboard.homelab.home.arpa portainer.homelab.home.arpa uptime-kuma.homelab.home.arpa grafana.homelab.home.arpa prometheus.homelab.home.arpa torrent.homelab.home.arpa files.homelab.home.arpa homeassistant.homelab.home.arpa media.homelab.home.arpa plex.homelab.home.arpa
 '';
 ```
 
@@ -228,6 +233,8 @@ Before running the stack, verify the following:
 
 The repository includes a small set of operational scripts that coordinate cluster state, GPU gating, and local credential handling.
 
+For detailed operator procedures—including certificate trust, local image import, Portfolio Puffin submodule updates, model management, and TUI actions—see the [Homelab operations guide](docs/homelab-operations.md).
+
 ### `./scripts/deploy.sh`
 
 Purpose: bootstrap or fully reapply the entire stack.
@@ -239,6 +246,7 @@ What it does:
 - loads the local secret file if present
 - resolves service hostnames, image tags, and credentials
 - builds Portfolio Puffin UI/API images from the `services/portfolio-zero` Git submodule, applies the homelab patch, and imports the images into k3s
+- imports images into the actual Kubernetes node runtime (Docker or k3s containerd) before applying workloads with local-only image pull policies
 - identifies whether NVIDIA is visible to the host and Kubernetes
 - decides which service should own GPU access (`auto`, `ollama`, `unsloth`, `vllm`, `none`)
 - templated renders all manifests from the `k8s/` directory and applies them with `kubectl`
@@ -275,13 +283,13 @@ GPU_SERVICE=unsloth ./scripts/update.sh
 
 To advance Portfolio Puffin to the upstream default branch, run `git submodule update --remote services/portfolio-zero`, review the new revision, and run `./scripts/update.sh`. The homelab patch stays in `patches/portfolio-zero/` and is applied only to the temporary image build context.
 
-Build the API and UI Docker images locally without deploying them:
+Build and import the Portfolio Puffin API and UI Docker images without applying the service manifests:
 
 ```bash
-./scripts/build-portfolio-puffin-images.sh
+./scripts/build-portfolio-puffin.sh
 ```
 
-The images are tagged `portfolio-puffin-api:local` and `portfolio-puffin-web:local` by default. Override them with `PORTFOLIO_PUFFIN_API_IMAGE` and `PORTFOLIO_PUFFIN_WEB_IMAGE` if needed.
+The script builds from the pinned `services/portfolio-zero` submodule revision, applies the homelab patch in a temporary build directory, and imports both images into the Kubernetes node runtime by default. Image tags are `portfolio-puffin-api:local` and `portfolio-puffin-web:local`; override them with `PORTFOLIO_PUFFIN_API_IMAGE` and `PORTFOLIO_PUFFIN_WEB_IMAGE`. Set `PORTFOLIO_PUFFIN_IMPORT_IMAGES=false` to build without importing. See [Homelab operations](docs/homelab-operations.md#portfolio-puffin-upstream-sync-build-and-deploy) for submodule sync and `ErrImageNeverPull` recovery.
 
 For most lab setups, keep the default at `GPU_SERVICE=ollama` and only opt back into vLLM when you specifically want a dedicated OpenAI-compatible server.
 
@@ -358,6 +366,8 @@ Common example:
 ./scripts/reset-unsloth-password.sh
 ```
 
+The same operation is available from the Homelab Control TUI with `P`. It updates the gitignored credentials file and displays the generated password once.
+
 ### `./scripts/setup-nvidia.sh`
 
 Purpose: configure the host-side NVIDIA runtime prerequisites for containerd or Docker.
@@ -401,6 +411,8 @@ It reads Deployments and StatefulSets in the selected namespace from `kubectl` a
 - **Reset Unsloth Studio password** (`P`) runs the existing reset script, updates `.homelab-secrets.env`, and displays the generated password in the TUI.
 - **Install Ollama model** (`M`) prompts for a model name and runs `ollama pull` in the Ollama pod with live progress; **List Ollama models** (`L`) shows models already installed.
 
+Model downloads use the model directory configured by the Ollama deployment. Download size and CPU/RAM needs vary by model; Ollama must be running when you start a pull.
+
 Examples of full deploy/update argument input:
 
 ```text
@@ -408,11 +420,21 @@ GPU_SERVICE=none --disable-ollama
 --gpu-service vllm
 ```
 
-Redeploy and restart preserve persistent volumes. The TUI does not invoke `scripts/redeploy-service.sh`, whose legacy behavior deletes PVCs.
+Redeploy and restart preserve persistent volumes. The TUI does not invoke `scripts/redeploy-service.sh`; that legacy script deletes PVCs and can erase application data. Use the TUI workload actions or `scripts/update.sh` when preserving service data matters.
 
 ## Quick start
 
-1. Review and adjust `.env` or `.env.example`.
+1. Optionally copy `.env.example` to `.env`, edit the values, and export them in the shell. The deployment scripts load `.homelab-secrets.env` automatically, but do not automatically source `.env`:
+
+```bash
+cp .env.example .env
+# Edit .env, then export its values into this shell.
+set -a
+. ./.env
+set +a
+```
+
+If you do not need environment overrides, skip this step.
 2. Install ingress-nginx in host-IP mode if it is not already present:
 
 ```bash
@@ -424,6 +446,8 @@ HOST_IP=192.168.0.6 ./scripts/install-ingress-nginx.sh
 ```bash
 ./scripts/setup-homelab-tls.sh
 ```
+
+Install `.local/tls/homelab-root-ca.crt` on client devices before opening the HTTPS URLs without certificate warnings. The setup script creates the certificate files locally; they are not committed.
 
 4. Deploy the stack:
 
@@ -446,9 +470,11 @@ kubectl get ingress -n homelab
 | --- | --- | --- |
 | Homepage dashboard | `https://dashboard.homelab.home.arpa` | ingress-backed UI |
 | Portfolio Puffin | `https://portfolio.homelab.home.arpa` | UI/API; SQLite and local credentials persist in a 10 GiB PVC; AI review uses homelab Ollama |
+| Stock-EZ | `https://stock-ez.homelab.home.arpa` | market and portfolio analysis |
 | Project README | `https://github.com/SushritPasupuleti/homelab/blob/main/README.md` | repo documentation |
+| Ollama | `https://ollama.homelab.home.arpa` | local model API; model pull/list are available in the TUI |
 | Unsloth API | `https://unsloth.homelab.home.arpa` | primary OpenAI-compatible model API |
-| Unsloth Studio | `https://unsloth-studio.homelab.home.arpa` | local web interface for the Unsloth stack |
+| Unsloth Studio | `https://unsloth-studio.homelab.home.arpa` | local web interface; API and Studio share one workload |
 | Open WebUI | `https://open-webui.homelab.home.arpa` | chat UI and model management |
 | OpenSERP | `https://openserp.homelab.home.arpa` | search backend |
 | Hermes | `https://hermes.homelab.home.arpa` | gateway endpoint |
@@ -457,6 +483,9 @@ kubectl get ingress -n homelab
 | Home Assistant | `https://homeassistant.homelab.home.arpa` | smart-home automation |
 | Grafana | `https://grafana.homelab.home.arpa` | metrics visualisation |
 | Prometheus | `https://prometheus.homelab.home.arpa` | metrics collection |
+| Uptime Kuma | `https://uptime-kuma.homelab.home.arpa` | service uptime monitoring |
+| Native vLLM | `https://vllm-native.homelab.home.arpa` | host service; OpenAI-compatible inference endpoint |
+| llama.cpp server | `https://llama-server.homelab.home.arpa` | host service; OpenAI-compatible inference endpoint |
 | qBittorrent | `https://torrent.homelab.home.arpa` | downloads |
 | File Browser | `https://files.homelab.home.arpa` | files |
 | Jellyfin | `https://media.homelab.home.arpa` | media streaming |
@@ -564,8 +593,8 @@ kubectl get nodes -o wide
 - `k8s/` – Kubernetes manifests
 - `scripts/` – deploy, update, and DNS helper scripts
 - `docs/` – troubleshooting and operational notes
-- `.env` – local runtime values for the current machine
-- `.env.example` – safe template for new deployments
+- `.env` – optional local overrides; source/export it before running scripts
+- `.env.example` – template for local overrides; scripts do not source it automatically
 
 ## NVIDIA GPU troubleshooting
 
@@ -600,6 +629,8 @@ This script prioritises the detected ingress IP and falls back to the node IP. I
 ```bash
 ./scripts/delete-homelab.sh
 ```
+
+This removes the namespace and its persistent volume claims. It is a full teardown and deletes application data. The per-service `scripts/redeploy-service.sh` also deletes PVCs; prefer the TUI restart/redeploy actions when you want to preserve data.
 
 ## Notes
 
@@ -704,7 +735,7 @@ The manifests in `k8s/media/` assume the media root is available at `/mnt/wdex41
 
 The original static HTML dashboard was intentionally replaced with Homepage, which is much easier to configure and extend without editing frontend code. You can update the dashboard directly in `k8s/dashboard/dashboard.yaml` by editing the `settings.yaml`, `services.yaml`, and `widgets.yaml` blocks.
 
-The resulting dashboard is mobile friendly and supports quick links, service tiles, and widgets for a more complete homelab overview.
+The resulting dashboard is mobile friendly and supports quick links, service tiles, and widgets for a more complete homelab overview. Its browser links use HTTPS and include Portfolio Puffin and the other current ingress-backed services.
 
 ## Bambu A1 central management
 

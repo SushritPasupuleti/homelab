@@ -111,8 +111,8 @@ If the resource is still absent, the runtime remains the likely culprit rather t
 Once the GPU is visible to Kubernetes:
 
 ```bash
-cd /home/sushrit_lawliet/code/homelab
-OLLAMA_USE_NVIDIA=true ./scripts/deploy.sh
+cd /path/to/homelab
+GPU_SERVICE=ollama OLLAMA_USE_NVIDIA=true ./scripts/deploy.sh
 ```
 
 Then validate:
@@ -129,6 +129,7 @@ kubectl describe pod -n homelab -l app=ollama
 - After runtime changes, always restart the runtime and refresh the GPU plugin.
 - Avoid assuming the model app is broken when a pod is `Pending` because the Kubernetes node has no `nvidia.com/gpu` allocation.
 - Confirm the node resource view before re-running a deployment.
+- Use `./scripts/homelab-tui.sh` for ongoing Kubernetes workload restart and rollout actions; it does not configure host GPU runtimes or systemd services.
 
 ## Notes
 
