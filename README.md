@@ -384,6 +384,32 @@ Purpose: remove the namespace and stack resources.
 
 Use with caution: this is destructive and should only be used when intentionally tearing down the lab.
 
+### Homelab Control TUI
+
+Run the Bubble Tea terminal interface from the repository root:
+
+```bash
+./scripts/homelab-tui.sh
+```
+
+It reads Deployments and StatefulSets in the selected namespace from `kubectl` and refreshes status periodically. Use `--namespace <name>` to change namespaces. The TUI provides full-stack deploy/update actions that accept script flags and `KEY=VALUE` environment assignments, plus per-workload restart, redeploy, stop, start, and force-kill actions. Argument fields accept terminal paste, support horizontal scrolling, and split input without shell evaluation; quote values containing spaces.
+
+- **Restart** deletes the current pods and lets their workload controller recreate them.
+- **Redeploy** restarts the workload from its current Kubernetes spec and waits for rollout readiness.
+- **Stop** scales a Deployment or StatefulSet to zero while saving its replica count; **Start** restores that count.
+- **Force kill** (`x`) deletes matching pods immediately; controllers recreate them.
+- **Reset Unsloth Studio password** (`P`) runs the existing reset script, updates `.homelab-secrets.env`, and displays the generated password in the TUI.
+- **Install Ollama model** (`M`) prompts for a model name and runs `ollama pull` in the Ollama pod with live progress; **List Ollama models** (`L`) shows models already installed.
+
+Examples of full deploy/update argument input:
+
+```text
+GPU_SERVICE=none --disable-ollama
+--gpu-service vllm
+```
+
+Redeploy and restart preserve persistent volumes. The TUI does not invoke `scripts/redeploy-service.sh`, whose legacy behavior deletes PVCs.
+
 ## Quick start
 
 1. Review and adjust `.env` or `.env.example`.

@@ -56,7 +56,7 @@ spec:
           resources:
             requests:
               cpu: 500m
-              memory: 1Gi
+              memory: 512Mi
               ${OLLAMA_GPU_REQUEST_KEY}
             limits:
               cpu: 4

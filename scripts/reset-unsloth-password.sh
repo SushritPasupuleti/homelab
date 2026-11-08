@@ -3,9 +3,15 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NAMESPACE="${NAMESPACE:-homelab}"
+SECRET_FILE="${HOMELAB_SECRET_FILE:-$ROOT_DIR/.homelab-secrets.env}"
+if [[ -f "$SECRET_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$SECRET_FILE"
+  set +a
+fi
 DEPLOYMENT="${UNSLOTH_DEPLOYMENT:-unsloth}"
 USERNAME="${UNSLOTH_STUDIO_USERNAME:-unsloth}"
-SECRET_FILE="${HOMELAB_SECRET_FILE:-$ROOT_DIR/.homelab-secrets.env}"
 
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "kubectl is required to reset Unsloth Studio credentials." >&2
