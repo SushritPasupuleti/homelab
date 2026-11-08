@@ -17,6 +17,7 @@ flowchart LR
     Ingress --> HA[Home Assistant]
     Ingress --> Media[Jellyfin / Plex / FileBrowser]
     Ingress --> Apps[Stock-EZ / Portainer / Grafana / Prometheus]
+    Ingress --> Portfolio[Portfolio Puffin]
     Ingress --> NativeVLLM[Native vLLM on bare metal]
 
     WebUI --> Ollama
@@ -34,6 +35,7 @@ flowchart LR
 ## Included services
 
 - Stock-EZ for app workloads and internal reporting
+- Portfolio Puffin for a local read-only Zerodha portfolio dashboard
 - Unsloth API and Studio as the local AI editing and experimentation layer
 - Ollama as the default GPU-backed model-serving layer for local inference
 - vLLM kept as an opt-in, GPU-specific serving path when you want a dedicated OpenAI-compatible server
@@ -63,6 +65,7 @@ flowchart LR
 The stack is intended to be reachable through hostnames such as:
 
 - `dashboard.homelab.home.arpa`
+- `portfolio.homelab.home.arpa`
 - `unsloth.homelab.home.arpa`
 - `unsloth-studio.homelab.home.arpa`
 - `ollama.homelab.home.arpa`
@@ -218,6 +221,7 @@ What it does:
 - verifies `kubectl` and cluster reachability
 - loads the local secret file if present
 - resolves service hostnames, image tags, and credentials
+- builds Portfolio Puffin UI/API images from the `services/portfolio-zero` Git submodule, applies the homelab patch, and imports the images into k3s
 - identifies whether NVIDIA is visible to the host and Kubernetes
 - decides which service should own GPU access (`auto`, `ollama`, `unsloth`, `vllm`, `none`)
 - templated renders all manifests from the `k8s/` directory and applies them with `kubectl`
@@ -241,6 +245,7 @@ What it does:
 - performs the same runtime and GPU validation as `deploy.sh`
 - refreshes manifests after changes to the stack
 - re-applies `k8s/` resources without reinitializing the entire cluster state
+- rebuilds Portfolio Puffin from the pinned upstream submodule revision
 - is useful when you change hostnames, image versions, or GPU policy
 
 Common examples:
@@ -250,6 +255,16 @@ Common examples:
 GPU_SERVICE=vllm ./scripts/update.sh
 GPU_SERVICE=unsloth ./scripts/update.sh
 ```
+
+To advance Portfolio Puffin to the upstream default branch, run `git submodule update --remote services/portfolio-zero`, review the new revision, and run `./scripts/update.sh`. The homelab patch stays in `patches/portfolio-zero/` and is applied only to the temporary image build context.
+
+Build the API and UI Docker images locally without deploying them:
+
+```bash
+./scripts/build-portfolio-puffin-images.sh
+```
+
+The images are tagged `portfolio-puffin-api:local` and `portfolio-puffin-web:local` by default. Override them with `PORTFOLIO_PUFFIN_API_IMAGE` and `PORTFOLIO_PUFFIN_WEB_IMAGE` if needed.
 
 For most lab setups, keep the default at `GPU_SERVICE=ollama` and only opt back into vLLM when you specifically want a dedicated OpenAI-compatible server.
 
@@ -381,6 +396,7 @@ kubectl get ingress -n homelab
 | Service | URL | Notes |
 | --- | --- | --- |
 | Homepage dashboard | `http://dashboard.homelab.home.arpa` | ingress-backed UI |
+| Portfolio Puffin | `http://portfolio.homelab.home.arpa` | UI/API; SQLite and local credentials persist in a 10 GiB PVC; AI review uses homelab Ollama |
 | Project README | `https://github.com/SushritPasupuleti/homelab/blob/main/README.md` | repo documentation |
 | Unsloth API | `http://unsloth.homelab.home.arpa` | primary OpenAI-compatible model API |
 | Unsloth Studio | `http://unsloth-studio.homelab.home.arpa` | local web interface for the Unsloth stack |

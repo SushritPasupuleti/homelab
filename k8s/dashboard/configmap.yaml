@@ -53,6 +53,8 @@ data:
                     url: https://github.com/SushritPasupuleti/homelab/blob/main/README.md
                   - title: Stock-EZ
                     url: http://stock-ez.homelab.home.arpa
+                  - title: Portfolio Puffin
+                    url: http://portfolio.homelab.home.arpa
                   - title: Portainer
                     url: http://portainer.homelab.home.arpa
                   - title: Grafana
@@ -105,6 +107,10 @@ data:
                     links:
                       - title: Stock-EZ
                         url: http://stock-ez.homelab.home.arpa
+                      - title: Portfolio Puffin
+                        url: http://portfolio.homelab.home.arpa
+                      - title: Portfolio Puffin source
+                        url: https://github.com/SushritPasupuleti/portfolio-zero
                       - title: Home Assistant
                         url: http://homeassistant.homelab.home.arpa
                       - title: Open WebUI
@@ -193,6 +199,8 @@ data:
                     url: http://homeassistant.homelab.home.arpa
                   - title: Open WebUI
                     url: http://open-webui.homelab.home.arpa
+                  - title: Portfolio Puffin
+                    url: http://portfolio.homelab.home.arpa
                   - title: Unsloth API
                     url: http://unsloth.homelab.home.arpa
                   - title: Unsloth Studio

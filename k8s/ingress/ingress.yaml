@@ -6,6 +6,16 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
+    - host: portfolio.homelab.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: portfolio-puffin-web
+                port:
+                  number: 80
     - host: stock-ez.homelab.home.arpa
       http:
         paths:

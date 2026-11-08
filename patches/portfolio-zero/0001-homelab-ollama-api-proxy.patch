@@ -1,0 +1,21 @@
+diff --git a/backend/app/ollama_adapter.py b/backend/app/ollama_adapter.py
+index b7efcc2..4d27525 100644
+--- a/backend/app/ollama_adapter.py
++++ b/backend/app/ollama_adapter.py
+@@ -12 +12,8 @@ from .models import Holding
+-ALLOWED_HOSTS = {"localhost", "127.0.0.1", "::1", "host.docker.internal", "ollama"}
++ALLOWED_HOSTS = {
++    "localhost",
++    "127.0.0.1",
++    "::1",
++    "host.docker.internal",
++    "ollama",
++    "ollama.homelab.svc.cluster.local",
++}
+diff --git a/frontend/nginx.conf b/frontend/nginx.conf
+index 7ccf7ca..0d6f22a 100644
+--- a/frontend/nginx.conf
++++ b/frontend/nginx.conf
+@@ -9 +9 @@ server {
+-    proxy_pass http://portfolio-puffin-api:8000/;
++    proxy_pass http://portfolio-puffin-api:8000;
